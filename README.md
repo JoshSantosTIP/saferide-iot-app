@@ -1,16 +1,46 @@
-# saferide_iot_app
+# SafeRide IoT App
 
-A new Flutter project.
+### Contributors:
+         rcpinca.it@tip.edu.ph
 
-## Getting Started
+## Project Description
+SafeRide is a mobile-based IoT safety monitoring system that prevents passenger overloading in jeepneys on routes like Montalban–Cubao. 
 
-This project is a starting point for a Flutter application.
+It uses load sensors, a microcontroller, and a mobile app to track passenger count in real time and alert drivers when capacity limits are reached.
 
-A few resources to get you started if this is your first Flutter project:
+This project serves as our final output, combining Flutter and IoT.
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## Technologies Used
+- Flutter
+- Dart
+- IoT Devices and Sensors
+- Firebase
+
+---
+
+## Planned Features
+- User authentication
+- Real-time location and sensor monitoring
+- Ride safety alerts and notifications
+- Cloud-based data storage and analytics
+- mobile application support
+
+---
+
+### Prerequisites
+- Flutter and Dart SDK
+- Git
+- Android Studio or VS Code
+
+---
+
+## Installation Instructions
+```bash
+git clone https://github.com/your-username/saferide-iot-app.git
+cd saferide-iot-app
+
+
+
+
