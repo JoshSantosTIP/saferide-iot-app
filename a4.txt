@@ -1,0 +1,11 @@
+﻿Analyzing saferide-iot-app...                                   
+
+  error - The class 'gsi.GoogleSignIn' doesn't have an unnamed constructor - lib\services\auth_service.dart:9:42 - new_with_undefined_constructor_default
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:23:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:54:7 - avoid_print
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:71:9 - avoid_print
+  error - The method 'signIn' isn't defined for the type 'GoogleSignIn' - lib\services\auth_service.dart:81:71 - undefined_method
+   info - Uses 'await' on an instance of 'GoogleSignInAuthentication', which is not a subtype of 'Future' - lib\services\auth_service.dart:89:57 - await_only_futures
+  error - The getter 'accessToken' isn't defined for the type 'GoogleSignInAuthentication' - lib\services\auth_service.dart:93:33 - undefined_getter
+   info - Don't invoke 'print' in production code - lib\services\auth_service.dart:104:7 - avoid_print
+
