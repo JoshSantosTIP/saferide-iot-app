@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SafeRide Sensor Simulation</title>
+    <style>
+        :root {
+            --primary-color: #0056D2;
+            --background-color: #F5F7FA;
+            --surface-color: #FFFFFF;
+            --text-color: #1A1A1A;
+            --error-color: #D32F2F;
+            --success-color: #388E3C;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .main-layout {
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            max-width: 900px;
+            width: 100%;
+            margin: 0 auto;
+            margin-top: 80px;
+        }
+
+        .container {
+            background-color: var(--surface-color);
+            padding: 40px;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+
+        h2 {
+            margin-top: 0;
+            color: var(--primary-color);
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        .dropdown-container {
+            margin-bottom: 2rem;
+            text-align: left;
+        }
+
+        .dropdown-container label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        select {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-sizing: border-box;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+
+        select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .control-group {
+            margin-bottom: 1.5rem;
+        }
+
+        .label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .value {
+            font-size: 2.5rem;
+            font-weight: bold;
+            color: var(--text-color);
+            margin: 0.5rem 0;
+        }
+
+        .btn-group {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        button {
+            border: none;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+
+        button:active {
+            transform: scale(0.95);
+        }
+
+        .btn-inc {
+            background-color: #e3f2fd;
+            color: var(--primary-color);
+        }
+
+        .btn-dec {
+            background-color: #FFEBEE;
+            color: var(--error-color);
+        }
+
+        .btn-reset {
+            background-color: var(--primary-color);
+            color: white;
+            width: 100%;
+            margin-top: 1rem;
+            padding: 14px;
+            font-size: 16px;
+        }
+
+        .btn-reset:hover {
+            background-color: #0044a6;
+        }
+
+        .status {
+            margin-top: 1rem;
+            font-size: 0.8rem;
+            color: #888;
+        }
+
+        .overload {
+            color: var(--error-color);
+            font-weight: bold;
+            display: none;
+            background-color: #FFEBEE;
+            padding: 8px;
+            border-radius: 8px;
+            margin-bottom: 1rem;
+        }
+
+        .overload.visible {
+            display: block;
+            animation: pulse 1s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div
+        style="position: absolute; top: 0; left: 0; right: 0; padding: 20px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; z-index: 100;">
+        <div style="display: flex; justify-content: center; gap: 40px;">
+            <a href="index.html"
+                style="text-decoration: none; font-weight: bold; color: #0056D2; border-bottom: 2px solid #0056D2; padding-bottom: 4px;">Simulation
+                Panel</a>
+            <a href="register.html"
+                style="text-decoration: none; font-weight: bold; color: #666; padding-bottom: 4px;">Register Jeepney</a>
+        </div>
+    </div>
+
+    <div class="main-layout">
+        <div class="container">
+            <h2>Simulation Panel</h2>
+
+            <div class="dropdown-container">
+                <label for="jeep-selector">Select a Jeepney to Simulate:</label>
+                <select id="jeep-selector">
+                    <option value="">Loading jeepneys...</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <div class="label">Current Weight (kg)</div>
+                <div id="weight-display" class="value">0</div>
+                <div class="overload" id="overload-msg">OVERLOAD DETECTED</div>
+                <div class="btn-group">
+                    <button class="btn-dec" onclick="updateWeight(-50)">-50</button>
+                    <button class="btn-dec" onclick="updateWeight(-10)">-10</button>
+                    <button class="btn-inc" onclick="updateWeight(10)">+10</button>
+                    <button class="btn-inc" onclick="updateWeight(50)">+50</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="label">Passengers</div>
+                <div id="passenger-display" class="value">0</div>
+                <div class="btn-group">
+                    <button class="btn-dec" onclick="updatePassengers(-1)">-1</button>
+                    <button class="btn-inc" onclick="updatePassengers(1)">+1</button>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <div class="label">GPS Location</div>
+                <div id="gps-display" class="value" style="font-size: 1.2rem; margin-bottom: 1rem;">Waiting...</div>
+                <div class="btn-group">
+                    <button class="btn-dec" onclick="moveLocation(-0.001, 0)">West</button>
+                    <button class="btn-inc" onclick="moveLocation(0, 0.001)">East</button>
+                    <button class="btn-inc" onclick="moveLocation(0.001, 0)">North</button>
+                    <button class="btn-dec" onclick="moveLocation(-0.001, 0)">South</button>
+                </div>
+            </div>
+
+            <button class="btn-reset" onclick="resetData()">Reset to Normal</button>
+            <div class="status" id="status">Connecting...</div>
+        </div>
+    </div>
+
+    <!-- Firebase SDKs -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getDatabase, ref, onValue, update, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyC-EEk3Yzap4oyQHGAOy_wNAn7HsoEX18U",
+            authDomain: "saferide-iot-app-c9d8f.firebaseapp.com",
+            databaseURL: "https://saferide-iot-app-c9d8f-default-rtdb.asia-southeast1.firebasedatabase.app",
+            projectId: "saferide-iot-app-c9d8f",
+            storageBucket: "saferide-iot-app-c9d8f.firebasestorage.app",
+            messagingSenderId: "818947733601",
+            appId: "1:818947733601:web:875b5a6292df7ae42c1220",
+            measurementId: "G-GWFZR8CZ8P"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const db = getDatabase(app);
+
+        const jeepSelector = document.getElementById('jeep-selector');
+
+        // State variables
+        let currentJeepId = null;
+        let currentData = null;
+        let currentListener = null;
+
+        // Fetch all jeepneys for dropdown
+        const allJeepsRef = ref(db, 'jeepneys');
+        onValue(allJeepsRef, (snapshot) => {
+            const data = snapshot.val();
+            const prevSelected = jeepSelector.value;
+            jeepSelector.innerHTML = '<option value="">-- Select a Jeepney --</option>';
+
+            if (data) {
+                Object.keys(data).forEach(id => {
+                    const jeepInfo = data[id];
+                    const route = jeepInfo.route ? jeepInfo.route : 'Unknown Route';
+
+                    const option = document.createElement('option');
+                    option.value = id;
+                    option.textContent = `${id} (${route})`;
+                    jeepSelector.appendChild(option);
+                });
+
+                // Keep the same jeep selected if it's still in the list
+                if (prevSelected && data[prevSelected]) {
+                    jeepSelector.value = prevSelected;
+                }
+            } else {
+                jeepSelector.innerHTML = '<option value="">No jeepneys found</option>';
+            }
+        });
+
+        // Event listener for dropdown change
+        jeepSelector.addEventListener('change', (e) => {
+            const newJeepId = e.target.value;
+            if (newJeepId) {
+                listenToJeep(newJeepId);
+            } else {
+                stopListening();
+            }
+        });
+
+        function stopListening() {
+            if (currentJeepId && currentListener) {
+                const oldRef = ref(db, `jeepneys/${currentJeepId}`);
+                off(oldRef, 'value', currentListener); // Removing listener manually
+            }
+            currentJeepId = null;
+            currentData = null;
+            renderDisplay(null);
+        }
+
+        function listenToJeep(jeepId) {
+            stopListening();
+            currentJeepId = jeepId;
+            const jeepRef = ref(db, `jeepneys/${jeepId}`);
+
+            // Listen for updates on the selected jeep
+            currentListener = onValue(jeepRef, (snapshot) => {
+                const data = snapshot.val();
+                if (data) {
+                    currentData = data;
+                    renderDisplay(data);
+                }
+            });
+        }
+
+        function renderDisplay(data) {
+            if (!data) {
+                document.getElementById('weight-display').innerText = '0';
+                document.getElementById('passenger-display').innerText = '0';
+                document.getElementById('gps-display').innerText = 'Waiting...';
+                document.getElementById('status').innerText = 'Select a jeepney to simulate';
+                document.getElementById('overload-msg').classList.remove('visible');
+                return;
+            }
+
+            const weight = data.current_weight || 0;
+            const passengers = data.passenger_count || 0;
+            const lat = data.latitude || 0;
+            const lng = data.longitude || 0;
+
+            document.getElementById('weight-display').innerText = weight.toFixed(1);
+            document.getElementById('passenger-display').innerText = passengers;
+            document.getElementById('gps-display').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            document.getElementById('status').innerText = `Simulating: ${currentJeepId} • Last Update: ` + new Date().toLocaleTimeString();
+
+            // Checking Overload Conditions dynamically based on its Max Capacities
+            const maxWeight = data.max_weight_capacity || 1000;
+            const maxSeat = data.max_seat_capacity || 20;
+
+            const isOverloaded = weight > maxWeight || passengers > maxSeat;
+
+            const msg = document.getElementById('overload-msg');
+            if (isOverloaded) {
+                msg.classList.add('visible');
+            } else {
+                msg.classList.remove('visible');
+            }
+        }
+
+        // --- Extracted Update functions logic ---
+        window.updateWeight = (delta) => {
+            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
+            let newWeight = (currentData.current_weight || 0) + delta;
+            if (newWeight < 0) newWeight = 0;
+            update(ref(db, `jeepneys/${currentJeepId}`), { current_weight: newWeight, last_updated: Date.now() });
+        };
+
+        window.updatePassengers = (delta) => {
+            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
+            let newCount = (currentData.passenger_count || 0) + delta;
+            if (newCount < 0) newCount = 0;
+            update(ref(db, `jeepneys/${currentJeepId}`), { passenger_count: newCount, last_updated: Date.now() });
+        };
+
+        window.moveLocation = (latDelta, longDelta) => {
+            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
+            let newLat = (currentData.latitude || 14.7338) + latDelta;
+            let newLong = (currentData.longitude || 121.1249) + longDelta;
+            update(ref(db, `jeepneys/${currentJeepId}`), { latitude: newLat, longitude: newLong, last_updated: Date.now() });
+        };
+
+        window.window.resetData = () => {
+            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
+            update(ref(db, `jeepneys/${currentJeepId}`), {
+                current_weight: 0,
+                passenger_count: 0,
+                is_overloaded: false,
+                last_updated: Date.now()
+            });
+        };
+    </script>
+</body>
+
+</html>
