@@ -4,394 +4,1173 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeRide Sensor Simulation</title>
+    <title>SafeRide - Premium Admin</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
+        /* Using Plus Jakarta Sans for maximum readability */
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+
         :root {
-            --primary-color: #0056D2;
-            --background-color: #F5F7FA;
-            --surface-color: #FFFFFF;
-            --text-color: #1A1A1A;
-            --error-color: #D32F2F;
-            --success-color: #388E3C;
+            /* Vibrant but light gradients */
+            --bg-gradient: linear-gradient(135deg, #f6f8fd 0%, #f1f5f9 100%);
+            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+            --sidebar-gradient: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+            --card-gradient: linear-gradient(145deg, #ffffff 0%, #fbfcfe 100%);
+
+            /* Status Gradients */
+            --success-gradient: linear-gradient(135deg, #10b981 0%, #34d399 100%);
+            --danger-gradient: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
+            --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
+
+            /* Solid Colors */
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --border: rgba(226, 232, 240, 0.8);
+            --sidebar-width: 260px;
+
+            /* Soft Shadows */
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
         }
 
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--background-color);
-            color: var(--text-color);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--bg-gradient);
+            color: var(--text-main);
             margin: 0;
-        }
-
-        .main-layout {
             display: flex;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: var(--sidebar-gradient);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            box-shadow: var(--shadow-sm);
+            z-index: 10;
+        }
+
+        .brand {
+            padding: 32px 24px;
+            font-size: 1.4rem;
+            font-weight: 700;
+            background: var(--primary-gradient);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            letter-spacing: -0.01em;
+        }
+
+        .brand-indicator {
+            width: 14px;
+            height: 14px;
+            background: var(--primary-gradient);
+            border-radius: 4px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+        }
+
+        .nav-menu {
+            padding: 0 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .nav-link {
+            padding: 12px 20px;
+            color: var(--text-muted);
+            text-decoration: none;
+            border-radius: 12px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+        }
+
+        .nav-link:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.7);
+            transform: translateX(4px);
+        }
+
+        .nav-link.active {
+            background: var(--primary-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+            font-weight: 600;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .topbar {
+            height: 76px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 5;
+        }
+
+        .page-title {
+            font-size: 1.35rem;
+            font-weight: 600;
+            margin: 0;
+            letter-spacing: -0.02em;
+        }
+
+        .user-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-weight: 500;
+            padding: 6px 16px 6px 6px;
+            background: white;
+            border-radius: 30px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+        }
+
+        .avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            color: white;
+            display: flex;
+            align-items: center;
             justify-content: center;
-            align-items: flex-start;
-            max-width: 900px;
-            width: 100%;
-            margin: 0 auto;
-            margin-top: 80px;
+            font-size: 0.9rem;
+            font-weight: 600;
         }
 
-        .container {
-            background-color: var(--surface-color);
+        .content-scroll {
+            flex: 1;
             padding: 40px;
-            border-radius: 16px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
-            width: 100%;
-            max-width: 400px;
-            text-align: center;
+            overflow-y: auto;
         }
 
-        h2 {
-            margin-top: 0;
-            color: var(--primary-color);
-            text-align: center;
-            margin-bottom: 24px;
+        /* Views */
+        .view {
+            display: none;
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        .dropdown-container {
-            margin-bottom: 2rem;
-            text-align: left;
+        .view.active {
+            display: block;
         }
 
-        .dropdown-container label {
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(15px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Cards & Layout */
+        .card {
+            background: var(--card-gradient);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            padding: 32px;
+            box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 1);
+            margin-bottom: 32px;
+            position: relative;
+            overflow: hidden;
+            transition: box-shadow 0.3s ease;
+        }
+
+        .card:hover {
+            box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 1);
+        }
+
+        /* Subtle top border for visual weight instead of full borders */
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: var(--border);
+            opacity: 0.5;
+        }
+
+        .card.card-primary::before {
+            background: var(--primary-gradient);
+            opacity: 1;
+        }
+
+        .card-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 0 0 24px 0;
+            color: var(--text-main);
+            letter-spacing: -0.01em;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+            margin-bottom: 32px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 24px;
+        }
+
+        .layout-sidebar {
+            display: grid;
+            grid-template-columns: 360px 1fr;
+            gap: 32px;
+            align-items: start;
+        }
+
+        /* Stats */
+        .stat-card {
+            display: flex;
+            align-items: center;
+            gap: 24px;
+            padding: 24px;
+        }
+
+        .stat-icon {
+            width: 14px;
+            height: 14px;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        .icon-blue {
+            background: var(--primary-gradient);
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+        }
+
+        .icon-green {
+            background: var(--success-gradient);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
+        .icon-red {
+            background: var(--danger-gradient);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+        }
+
+        .stat-info h3 {
+            margin: 0;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stat-info .value {
+            margin: 4px 0 0;
+            font-size: 2.25rem;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            color: var(--text-main);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
             display: block;
             margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 14px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-muted);
         }
 
+        input,
         select {
             width: 100%;
-            padding: 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            font-size: 1rem;
+            font-family: inherit;
+            background: rgba(255, 255, 255, 0.6);
             box-sizing: border-box;
-            font-size: 16px;
-            transition: border-color 0.3s;
+            transition: all 0.3s ease;
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
         }
 
+        input:focus,
         select:focus {
             outline: none;
-            border-color: var(--primary-color);
+            border-color: #6366f1;
+            background: #ffffff;
+            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
         }
 
-        .control-group {
-            margin-bottom: 1.5rem;
-        }
-
-        .label {
-            display: block;
-            margin-bottom: 8px;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .value {
-            font-size: 2.5rem;
-            font-weight: bold;
-            color: var(--text-color);
-            margin: 0.5rem 0;
-        }
-
-        .btn-group {
-            display: flex;
-            justify-content: center;
-            gap: 10px;
-        }
-
+        /* Buttons */
         button {
+            padding: 12px 24px;
             border: none;
-            padding: 10px 14px;
-            border-radius: 8px;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
             cursor: pointer;
-            font-size: 14px;
-            font-weight: bold;
-            transition: background-color 0.3s;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            font-family: inherit;
         }
 
-        button:active {
-            transform: scale(0.95);
-        }
-
-        .btn-inc {
-            background-color: #e3f2fd;
-            color: var(--primary-color);
-        }
-
-        .btn-dec {
-            background-color: #FFEBEE;
-            color: var(--error-color);
-        }
-
-        .btn-reset {
-            background-color: var(--primary-color);
+        .btn-primary {
+            background: var(--primary-gradient);
             color: white;
             width: 100%;
-            margin-top: 1rem;
-            padding: 14px;
-            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
         }
 
-        .btn-reset:hover {
-            background-color: #0044a6;
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
         }
 
-        .status {
-            margin-top: 1rem;
-            font-size: 0.8rem;
-            color: #888;
+        .btn-primary:active {
+            transform: translateY(0);
         }
 
-        .overload {
-            color: var(--error-color);
-            font-weight: bold;
-            display: none;
-            background-color: #FFEBEE;
-            padding: 8px;
+        .btn-outline {
+            background: white;
+            border: 1px solid rgba(226, 232, 240, 1);
+            color: var(--text-main);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .btn-outline:hover {
+            border-color: #6366f1;
+            color: #4f46e5;
+            background: #f8fafc;
+        }
+
+        .btn-danger {
+            background: var(--danger-gradient);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.25);
+        }
+
+        .btn-danger:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.35);
+        }
+
+        .btn-small {
+            padding: 8px 16px;
+            font-size: 0.85rem;
             border-radius: 8px;
-            margin-bottom: 1rem;
         }
 
-        .overload.visible {
-            display: block;
-            animation: pulse 1s infinite;
+        /* Tables */
+        .table-responsive {
+            overflow-x: auto;
+            margin: -10px;
+            padding: 10px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0 8px;
+        }
+
+        th,
+        td {
+            text-align: left;
+            padding: 16px 20px;
+        }
+
+        th {
+            font-weight: 600;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        tbody tr {
+            background: white;
+            box-shadow: var(--shadow-sm);
+            border-radius: 12px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            border: 1px solid rgba(255, 255, 255, 0.8);
+        }
+
+        tbody tr:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        td:first-child {
+            border-radius: 12px 0 0 12px;
+        }
+
+        td:last-child {
+            border-radius: 0 12px 12px 0;
+        }
+
+        /* Badges */
+        .badge {
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: white;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .badge-success {
+            background: var(--success-gradient);
+        }
+
+        .badge-danger {
+            background: var(--danger-gradient);
+            animation: pulse 2s infinite;
+        }
+
+        .badge-passenger {
+            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+        }
+
+        .badge-operator {
+            background: var(--warning-gradient);
+        }
+
+        .badge-admin {
+            background: linear-gradient(135deg, #a855f7 0%, #7e22ce 100%);
         }
 
         @keyframes pulse {
             0% {
-                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
             }
 
-            50% {
-                opacity: 0.5;
+            70% {
+                box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
             }
 
             100% {
-                opacity: 1;
+                box-shadow: 0 0 0 0 rgba(239, 68, 68, 0);
             }
+        }
+
+        /* Simulation Specifics */
+        .value-display {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 8px 0;
+            color: var(--text-main);
+            line-height: 1.1;
+        }
+
+        .sim-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .sim-actions button {
+            flex: 1;
+        }
+
+        .alert-box {
+            background: var(--danger-gradient);
+            color: white;
+            padding: 16px;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 600;
+            margin-bottom: 24px;
+            box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
+            display: none;
+        }
+
+        .alert-box.visible {
+            display: block;
+            animation: slideUp 0.3s ease;
+        }
+
+        .sim-panel-box {
+            background: rgba(255, 255, 255, 0.7);
+            padding: 24px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8);
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .modal {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 440px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        /* Messages */
+        .msg {
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 500;
+            text-align: center;
+            margin-top: 20px;
+            display: none;
+            color: white;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .msg.success {
+            background: var(--success-gradient);
+            display: block;
+        }
+
+        .msg.error {
+            background: var(--danger-gradient);
+            display: block;
         }
     </style>
 </head>
 
 <body>
-    <div
-        style="position: absolute; top: 0; left: 0; right: 0; padding: 20px; background: white; box-shadow: 0 2px 4px rgba(0,0,0,0.05); text-align: center; z-index: 100;">
-        <div style="display: flex; justify-content: center; gap: 40px;">
-            <a href="index.html"
-                style="text-decoration: none; font-weight: bold; color: #0056D2; border-bottom: 2px solid #0056D2; padding-bottom: 4px;">Simulation
-                Panel</a>
-            <a href="register.html"
-                style="text-decoration: none; font-weight: bold; color: #666; padding-bottom: 4px;">Register Jeepney</a>
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+        <div class="brand">
+            <div class="brand-indicator"></div>
+            SafeRide
+        </div>
+        <nav class="nav-menu">
+            <a class="nav-link active" data-target="view-overview">Overview</a>
+            <a class="nav-link" data-target="view-sim">Simulation Panel</a>
+            <a class="nav-link" data-target="view-fleet">Jeepney Fleet</a>
+            <a class="nav-link" data-target="view-users">Users</a>
+        </nav>
+    </aside>
+
+    <!-- CONTENT -->
+    <main class="main-content">
+        <header class="topbar">
+            <h1 class="page-title" id="page-title">Overview</h1>
+            <div class="user-profile">
+                <div class="avatar">A</div>
+                Admin Access
+            </div>
+        </header>
+
+        <div class="content-scroll">
+
+            <!-- OVERVIEW -->
+            <section id="view-overview" class="view active">
+                <div class="grid-3">
+                    <div class="card stat-card">
+                        <div class="stat-icon icon-blue"></div>
+                        <div class="stat-info">
+                            <h3>Registered Users</h3>
+                            <div class="value" id="stat-users">0</div>
+                        </div>
+                    </div>
+                    <div class="card stat-card">
+                        <div class="stat-icon icon-green"></div>
+                        <div class="stat-info">
+                            <h3>Active Jeepneys</h3>
+                            <div class="value" id="stat-fleet">0</div>
+                        </div>
+                    </div>
+                    <div class="card stat-card card-primary">
+                        <div class="stat-icon icon-red"></div>
+                        <div class="stat-info">
+                            <h3>Live Overloads</h3>
+                            <div class="value" id="stat-alerts">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-primary">
+                    <h2 class="card-title">Live Fleet Status</h2>
+                    <div class="table-responsive">
+                        <table id="healthTable">
+                            <thead>
+                                <tr>
+                                    <th>Jeepney Details</th>
+                                    <th>Assigned Operator</th>
+                                    <th>Assigned Route</th>
+                                    <th>Status</th>
+                                    <th>Passengers</th>
+                                    <th>Weight (kg)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="healthTbody">
+                                <tr>
+                                    <td colspan="5" style="text-align:center;">Loading data...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- SIMULATION -->
+            <section id="view-sim" class="view">
+                <div class="card card-primary" style="max-width: 650px; margin: 0 auto; min-height: 600px;">
+                    <h2 class="card-title">Simulation Controls</h2>
+
+                    <div class="form-group" style="margin-bottom: 32px;">
+                        <select id="sim-select">
+                            <option value="">Select a jeepney...</option>
+                        </select>
+                    </div>
+
+                    <div class="alert-box" id="sim-alert">ALERT: Over capacity!</div>
+
+                    <div class="grid-2">
+                        <div class="sim-panel-box">
+                            <label>Weight (kg)</label>
+                            <div class="value-display" id="sim-weight">0</div>
+                            <div class="sim-actions">
+                                <button class="btn-outline" onclick="changeW(-50)">-50</button>
+                                <button class="btn-outline" onclick="changeW(-10)">-10</button>
+                                <button class="btn-outline" onclick="changeW(10)">+10</button>
+                                <button class="btn-outline" onclick="changeW(50)">+50</button>
+                            </div>
+                        </div>
+                        <div class="sim-panel-box">
+                            <label>Passengers</label>
+                            <div class="value-display" id="sim-pax">0</div>
+                            <div class="sim-actions">
+                                <button class="btn-outline" onclick="changeP(-1)">-1</button>
+                                <button class="btn-outline" onclick="changeP(1)">+1</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="sim-panel-box" style="margin-top: 24px;">
+                        <label>GPS Coordinates: <span id="sim-gps"
+                                style="font-weight:700; color:var(--primary-main);">Waiting...</span></label>
+                        <div class="sim-actions">
+                            <button class="btn-outline" onclick="move(-0.001, 0)">West</button>
+                            <button class="btn-outline" onclick="move(0, 0.001)">East</button>
+                            <button class="btn-outline" onclick="move(0.001, 0)">North</button>
+                            <button class="btn-outline" onclick="move(-0.001, 0)">South</button>
+                        </div>
+                        <div id="sim-map"
+                            style="height: 250px; width: 100%; border-radius: 12px; margin-top: 24px; z-index: 1;">
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" style="margin-top: 32px;" onclick="resetSim()">Reset Data</button>
+                    <div style="text-align:center; font-size:0.85rem; color:var(--text-muted); margin-top:16px; font-weight: 500;"
+                        id="sim-time">Disconnected</div>
+                </div>
+            </section>
+
+            <!-- FLEET -->
+            <section id="view-fleet" class="view">
+                <div class="layout-sidebar">
+                    <div class="card card-primary">
+                        <h2 class="card-title">Register Jeepney</h2>
+                        <form id="fleetForm">
+                            <div class="form-group">
+                                <label>Jeepney Name</label>
+                                <input type="text" id="fl-name" placeholder="e.g. Express-A" required>
+                            </div>
+                            <div class="grid-2">
+                                <div class="form-group">
+                                    <label>Plate Number</label>
+                                    <input type="text" id="fl-plate" required>
+                                </div>
+                                <div class="form-group">
+                                    <label>Route Description</label>
+                                    <input type="text" id="fl-route" required>
+                                </div>
+                            </div>
+                            <div class="grid-2">
+                                <div class="form-group"><label>Max Seats</label><input type="number" id="fl-seats"
+                                        value="20" required></div>
+                                <div class="form-group"><label>Max Weight (kg)</label><input type="number"
+                                        id="fl-weight" value="1000" required></div>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top:8px;">Add Jeepney</button>
+                            <div id="fl-msg" class="msg"></div>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <h2 class="card-title">Registered Fleet</h2>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Jeepney Details</th>
+                                        <th>Assigned Operator</th>
+                                        <th>Assigned Route</th>
+                                        <th>Capacities</th>
+                                        <th style="text-align:right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fleetTbody">
+                                    <tr>
+                                        <td colspan="5">Loading data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- USERS -->
+            <section id="view-users" class="view">
+                <div class="layout-sidebar">
+                    <div class="card card-primary">
+                        <h2 class="card-title">Register User</h2>
+                        <form id="usrForm">
+                            <!-- Removed Username input -->
+                            <div class="form-group"><label>Email</label><input type="email" id="u-email" required></div>
+                            <div class="form-group"><label>Full Name</label><input type="text" id="u-name" required>
+                            </div>
+                            <div class="form-group">
+                                <label>Role</label>
+                                <select id="u-role">
+                                    <option value="passenger">Passenger</option>
+                                    <option value="operator">Operator (Driver)</option>
+                                    <option value="admin">Admin</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="u-jp-grp" style="display:none;">
+                                <label>Vehicle Unit</label>
+                                <select id="u-jp">
+                                    <option value="">None</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top:8px;">Add User</button>
+                            <div id="u-msg" class="msg"></div>
+                        </form>
+                    </div>
+
+                    <div class="card">
+                        <div
+                            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:24px;">
+                            <h2 class="card-title" style="margin:0;">User List</h2>
+                            <input type="text" id="u-search" placeholder="Search users..."
+                                style="width:240px; margin-bottom:0;">
+                        </div>
+                        <div class="table-responsive">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Role</th>
+                                        <th>Vehicle Unit</th>
+                                        <th style="text-align:right;">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersTbody">
+                                    <tr>
+                                        <td colspan="4">Loading data...</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <!-- MODAL -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal card">
+            <h2 class="card-title" style="margin-bottom: 24px;">Modify User Profile</h2>
+            <form id="editForm">
+                <input type="hidden" id="e-id">
+                <div class="form-group"><label>Full Name</label><input type="text" id="e-name" required></div>
+                <div class="form-group">
+                    <label>Role</label>
+                    <select id="e-role">
+                        <option value="passenger">Passenger</option>
+                        <option value="operator">Operator (Driver)</option>
+                        <option value="admin">Admin</option>
+                    </select>
+                </div>
+                <div class="form-group" id="e-jp-grp" style="display:none;">
+                    <label>Vehicle Unit</label>
+                    <select id="e-jp">
+                        <option value="">None</option>
+                    </select>
+                </div>
+                <div style="display:flex; gap:16px; margin-top:32px;">
+                    <button type="button" class="btn-outline" style="flex:1;"
+                        onclick="document.getElementById('modal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
+                </div>
+                <div id="e-msg" class="msg"></div>
+            </form>
         </div>
     </div>
 
-    <div class="main-layout">
-        <div class="container">
-            <h2>Simulation Panel</h2>
-
-            <div class="dropdown-container">
-                <label for="jeep-selector">Select a Jeepney to Simulate:</label>
-                <select id="jeep-selector">
-                    <option value="">Loading jeepneys...</option>
-                </select>
-            </div>
-
-            <div class="control-group">
-                <div class="label">Current Weight (kg)</div>
-                <div id="weight-display" class="value">0</div>
-                <div class="overload" id="overload-msg">OVERLOAD DETECTED</div>
-                <div class="btn-group">
-                    <button class="btn-dec" onclick="updateWeight(-50)">-50</button>
-                    <button class="btn-dec" onclick="updateWeight(-10)">-10</button>
-                    <button class="btn-inc" onclick="updateWeight(10)">+10</button>
-                    <button class="btn-inc" onclick="updateWeight(50)">+50</button>
+    <!-- JEEPNEY EDIT MODAL -->
+    <div class="modal-overlay" id="jeepModal">
+        <div class="modal card">
+            <h2 class="card-title" style="margin-bottom: 24px;">Modify Jeepney</h2>
+            <form id="editJeepForm">
+                <input type="hidden" id="ej-id">
+                <div class="grid-2">
+                    <div class="form-group"><label>Jeepney Name</label><input type="text" id="ej-name" required></div>
+                    <div class="form-group"><label>Plate Number</label><input type="text" id="ej-plate" required></div>
                 </div>
-            </div>
-
-            <div class="control-group">
-                <div class="label">Passengers</div>
-                <div id="passenger-display" class="value">0</div>
-                <div class="btn-group">
-                    <button class="btn-dec" onclick="updatePassengers(-1)">-1</button>
-                    <button class="btn-inc" onclick="updatePassengers(1)">+1</button>
+                <div class="form-group"><label>Route Description</label><input type="text" id="ej-route" required></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Max Seats</label><input type="number" id="ej-seats" required></div>
+                    <div class="form-group"><label>Max Weight (kg)</label><input type="number" id="ej-weight" required>
+                    </div>
                 </div>
-            </div>
-
-            <div class="control-group">
-                <div class="label">GPS Location</div>
-                <div id="gps-display" class="value" style="font-size: 1.2rem; margin-bottom: 1rem;">Waiting...</div>
-                <div class="btn-group">
-                    <button class="btn-dec" onclick="moveLocation(-0.001, 0)">West</button>
-                    <button class="btn-inc" onclick="moveLocation(0, 0.001)">East</button>
-                    <button class="btn-inc" onclick="moveLocation(0.001, 0)">North</button>
-                    <button class="btn-dec" onclick="moveLocation(-0.001, 0)">South</button>
+                <div style="display:flex; gap:16px; margin-top:32px;">
+                    <button type="button" class="btn-outline" style="flex:1;"
+                        onclick="document.getElementById('jeepModal').style.display='none'">Cancel</button>
+                    <button type="submit" class="btn-primary" style="flex:1;">Save Changes</button>
                 </div>
-            </div>
-
-            <button class="btn-reset" onclick="resetData()">Reset to Normal</button>
-            <div class="status" id="status">Connecting...</div>
+                <div id="ej-msg" class="msg"></div>
+            </form>
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
+    <!-- SCRIPT -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getDatabase, ref, onValue, update, off } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getDatabase, ref, set, onValue, update, remove, off } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
 
-        const firebaseConfig = {
+        // Router
+        const navs = document.querySelectorAll('.nav-link');
+        const views = document.querySelectorAll('.view');
+        const title = document.getElementById('page-title');
+        navs.forEach(n => {
+            n.addEventListener('click', e => {
+                navs.forEach(x => x.classList.remove('active'));
+                n.classList.add('active');
+                title.innerText = n.innerText;
+                const t = n.getAttribute('data-target');
+                views.forEach(v => {
+                    v.classList.remove('active');
+                    if (v.id === t) v.classList.add('active');
+                });
+                if (t === 'view-sim') setTimeout(() => { initMap(); if (map) map.invalidateSize(); }, 200);
+            });
+        });
+
+        // Map Setup
+        let map;
+        let marker;
+        function initMap() {
+            if (!map) {
+                map = L.map('sim-map').setView([14.7338, 121.1249], 15);
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                    attribution: '© OpenStreetMap'
+                }).addTo(map);
+                marker = L.marker([14.7338, 121.1249]).addTo(map);
+            }
+        }
+
+        // Firebase Setup
+        const app = initializeApp({
             apiKey: "AIzaSyC-EEk3Yzap4oyQHGAOy_wNAn7HsoEX18U",
             authDomain: "saferide-iot-app-c9d8f.firebaseapp.com",
             databaseURL: "https://saferide-iot-app-c9d8f-default-rtdb.asia-southeast1.firebasedatabase.app",
             projectId: "saferide-iot-app-c9d8f",
             storageBucket: "saferide-iot-app-c9d8f.firebasestorage.app",
             messagingSenderId: "818947733601",
-            appId: "1:818947733601:web:875b5a6292df7ae42c1220",
-            measurementId: "G-GWFZR8CZ8P"
-        };
-
-        // Initialize Firebase
-        const app = initializeApp(firebaseConfig);
+            appId: "1:818947733601:web:875b5a6292df7ae42c1220"
+        });
         const db = getDatabase(app);
 
-        const jeepSelector = document.getElementById('jeep-selector');
+        let jeeps = {}; let users = {};
+        let sId = null; let sData = null; let sLis = null;
 
-        // State variables
-        let currentJeepId = null;
-        let currentData = null;
-        let currentListener = null;
+        // Fetchers
+        onValue(ref(db, 'users'), s => { users = s.val() || {}; refreshData(); });
+        onValue(ref(db, 'jeepneys'), s => { jeeps = s.val() || {}; refreshData(); });
 
-        // Fetch all jeepneys for dropdown
-        const allJeepsRef = ref(db, 'jeepneys');
-        onValue(allJeepsRef, (snapshot) => {
-            const data = snapshot.val();
-            const prevSelected = jeepSelector.value;
-            jeepSelector.innerHTML = '<option value="">-- Select a Jeepney --</option>';
+        function refreshData() {
+            // Stats
+            document.getElementById('stat-users').innerText = Object.keys(users).length;
+            document.getElementById('stat-fleet').innerText = Object.keys(jeeps).length;
+            let ov = 0;
+            Object.values(jeeps).forEach(j => {
+                if ((j.current_weight || 0) > (j.max_weight_capacity || 1000) || j.is_overloaded) ov++;
+            });
+            document.getElementById('stat-alerts').innerText = ov;
 
-            if (data) {
-                Object.keys(data).forEach(id => {
-                    const jeepInfo = data[id];
-                    const route = jeepInfo.route ? jeepInfo.route : 'Unknown Route';
+            // Operator Lookup
+            const getOperator = (jid) => {
+                const op = Object.values(users).find(u => u.role === 'operator' && (u.assignedJeepney === jid || u.assigned_jeepney === jid));
+                return op ? (op.name || op.fullName) : 'Unassigned';
+            };
 
-                    const option = document.createElement('option');
-                    option.value = id;
-                    option.textContent = `${id} (${route})`;
-                    jeepSelector.appendChild(option);
+            // Health Table
+            const hb = document.getElementById('healthTbody');
+            if (!Object.keys(jeeps).length) hb.innerHTML = '<tr><td colspan="6">No active jeepneys.</td></tr>';
+            else {
+                let hh = '';
+                Object.keys(jeeps).forEach(k => {
+                    const j = jeeps[k];
+                    const w = j.current_weight || 0, p = j.passenger_count || 0;
+                    const mw = j.max_weight_capacity || 1000, mp = j.max_seat_capacity || 20;
+                    const bad = w > mw || j.is_overloaded;
+                    const opName = getOperator(k);
+                    hh += `<tr>
+                        <td>
+                            <div style="font-weight:600; font-size:1.05rem;">${j.name || 'Unnamed Jeepney'}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">${j.plate_number || 'No Plate'} • ID: ${k}</div>
+                        </td>
+                        <td><strong style="color:${opName === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)'}; font-weight:500;">${opName}</strong></td>
+                        <td>${j.route || '-'}</td>
+                        <td><span class="badge ${bad ? 'badge-danger' : 'badge-success'}">${bad ? 'OVERLOADED' : 'OK'}</span></td>
+                        <td><span style="font-weight:${p > mp ? '700' : '500'}; color:${p > mp ? '#ef4444' : 'inherit'};">${p}</span> / ${mp}</td>
+                        <td><span style="font-weight:${w > mw ? '700' : '500'}; color:${w > mw ? '#ef4444' : 'inherit'};">${w.toFixed(1)}</span> / ${mw}</td>
+                    </tr>`;
                 });
-
-                // Keep the same jeep selected if it's still in the list
-                if (prevSelected && data[prevSelected]) {
-                    jeepSelector.value = prevSelected;
-                }
-            } else {
-                jeepSelector.innerHTML = '<option value="">No jeepneys found</option>';
+                hb.innerHTML = hh;
             }
+
+            // Fleet Table
+            const fb = document.getElementById('fleetTbody');
+            if (!Object.keys(jeeps).length) fb.innerHTML = '<tr><td colspan="5">No jeepneys registered.</td></tr>';
+            else {
+                fb.innerHTML = Object.keys(jeeps).map(k => {
+                    const j = jeeps[k];
+                    const opName = getOperator(k);
+                    return `<tr>
+                    <td>
+                        <div style="font-weight:600; font-size:1.05rem;">${j.name || 'Unnamed Jeepney'}</div>
+                        <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">${j.plate_number || 'No Plate'} • ID: ${k}</div>
+                    </td>
+                    <td><strong style="color:${opName === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)'}; font-weight:500;">${opName}</strong></td>
+                    <td>${j.route || '-'}</td>
+                    <td style="color:var(--text-muted); font-size:0.9rem;">${j.max_seat_capacity || 20} Seats | ${j.max_weight_capacity || 1000}kg</td>
+                    <td style="text-align:right;">
+                        <button class="btn-outline btn-small" onclick="edtJeep('${k}')">Modify</button>
+                        <button class="btn-danger btn-small" onclick="delJeep('${k}')">Delete</button>
+                    </td></tr>`;
+                }).join('');
+            }
+
+            // Selects
+            let ops = '<option value="">None</option>';
+            Object.keys(jeeps).forEach(k => ops += `<option value="${k}">${jeeps[k].name || jeeps[k].plate_number || k}</option>`);
+
+            const ps = document.getElementById('sim-select');
+            const v = ps.value;
+            ps.innerHTML = '<option value="">Select Jeepney...</option>' + ops.replace('<option value="">None</option>', '');
+            if (v && jeeps[v]) ps.value = v;
+
+            document.getElementById('u-jp').innerHTML = ops;
+
+            const es = document.getElementById('e-jp');
+            const ev = es.value;
+            es.innerHTML = ops;
+            if (ev) es.value = ev;
+
+            // Users Table
+            renderUsers();
+        }
+
+        // Sim Panel
+        document.getElementById('sim-select').addEventListener('change', e => {
+            if (sId && sLis) off(ref(db, `jeepneys/${sId}`), 'value', sLis);
+            sId = e.target.value; sData = null;
+            if (sId) sLis = onValue(ref(db, `jeepneys/${sId}`), s => { sData = s.val(); rs(); });
+            else rs();
         });
 
-        // Event listener for dropdown change
-        jeepSelector.addEventListener('change', (e) => {
-            const newJeepId = e.target.value;
-            if (newJeepId) {
-                listenToJeep(newJeepId);
-            } else {
-                stopListening();
+        function rs() {
+            if (!sData) {
+                document.getElementById('sim-weight').innerText = '0';
+                document.getElementById('sim-pax').innerText = '0';
+                document.getElementById('sim-gps').innerText = 'Awaiting Signal';
+                document.getElementById('sim-time').innerText = 'Disconnected';
+                document.getElementById('sim-alert').classList.remove('visible'); return;
             }
+            const w = sData.current_weight || 0, p = sData.passenger_count || 0;
+            const mw = sData.max_weight_capacity || 1000, mp = sData.max_seat_capacity || 20;
+            const lat = sData.latitude || 14.7338, lng = sData.longitude || 121.1249;
+            document.getElementById('sim-weight').innerText = w.toFixed(1);
+            document.getElementById('sim-pax').innerText = p;
+            document.getElementById('sim-gps').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+
+            if (map && marker) {
+                marker.setLatLng([lat, lng]);
+                map.panTo([lat, lng]);
+            }
+            document.getElementById('sim-time').innerText = `Last Updated: ${new Date().toLocaleTimeString()}`;
+            if (w > mw) document.getElementById('sim-alert').classList.add('visible');
+            else document.getElementById('sim-alert').classList.remove('visible');
+        }
+
+        window.changeW = (d) => { if (sData) update(ref(db, `jeepneys/${sId}`), { current_weight: Math.max(0, (sData.current_weight || 0) + d), last_updated: Date.now() }) };
+        window.changeP = (d) => { if (sData) update(ref(db, `jeepneys/${sId}`), { passenger_count: Math.max(0, (sData.passenger_count || 0) + d), last_updated: Date.now() }) };
+        window.move = (lat, lng) => { if (sData) update(ref(db, `jeepneys/${sId}`), { latitude: (sData.latitude || 14.73) + lat, longitude: (sData.longitude || 121.12) + lng, last_updated: Date.now() }) };
+        window.resetSim = () => { if (sData) update(ref(db, `jeepneys/${sId}`), { current_weight: 0, passenger_count: 0, is_overloaded: false, last_updated: Date.now() }) };
+
+        // Fleet Provisioning
+        document.getElementById('fleetForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const nm = document.getElementById('fl-name').value.trim();
+            const pl = document.getElementById('fl-plate').value.trim(), r = document.getElementById('fl-route').value.trim();
+            const s = parseInt(document.getElementById('fl-seats').value), w = parseInt(document.getElementById('fl-weight').value);
+            const id = 'JPNY-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
+            try {
+                await set(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: r, status: 'Available', current_weight: 0, max_weight_capacity: w, passenger_count: 0, max_seat_capacity: s, latitude: 14.7338, longitude: 121.1249, is_overloaded: false, last_updated: Date.now() });
+                msg('fl-msg', 'Added', 'success'); e.target.reset();
+            } catch (x) { msg('fl-msg', 'Error', 'error'); }
         });
 
-        function stopListening() {
-            if (currentJeepId && currentListener) {
-                const oldRef = ref(db, `jeepneys/${currentJeepId}`);
-                off(oldRef, 'value', currentListener); // Removing listener manually
-            }
-            currentJeepId = null;
-            currentData = null;
-            renderDisplay(null);
-        }
+        // Fleet Management Actions
+        window.edtJeep = (id) => {
+            const j = jeeps[id]; if (!j) return;
+            document.getElementById('ej-id').value = id;
+            document.getElementById('ej-name').value = j.name || '';
+            document.getElementById('ej-plate').value = j.plate_number || id;
+            document.getElementById('ej-route').value = j.route || '';
+            document.getElementById('ej-seats').value = j.max_seat_capacity || 20;
+            document.getElementById('ej-weight').value = j.max_weight_capacity || 1000;
+            document.getElementById('jeepModal').style.display = 'flex';
+        };
 
-        function listenToJeep(jeepId) {
-            stopListening();
-            currentJeepId = jeepId;
-            const jeepRef = ref(db, `jeepneys/${jeepId}`);
+        document.getElementById('editJeepForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const id = document.getElementById('ej-id').value, nm = document.getElementById('ej-name').value, pl = document.getElementById('ej-plate').value;
+            const rt = document.getElementById('ej-route').value, ms = parseInt(document.getElementById('ej-seats').value), mw = parseInt(document.getElementById('ej-weight').value);
+            try {
+                await update(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: rt, max_seat_capacity: ms, max_weight_capacity: mw });
+                msg('ej-msg', 'Saved', 'success');
+                setTimeout(() => document.getElementById('jeepModal').style.display = 'none', 600);
+            } catch (x) { msg('ej-msg', 'Error', 'error'); }
+        });
 
-            // Listen for updates on the selected jeep
-            currentListener = onValue(jeepRef, (snapshot) => {
-                const data = snapshot.val();
-                if (data) {
-                    currentData = data;
-                    renderDisplay(data);
+        window.delJeep = async (id) => { if (confirm(`Delete jeepney system ID ${id}?`)) await remove(ref(db, `jeepneys/${id}`)); };
+
+        // Identity Management
+        const us = document.getElementById('u-search');
+        us.addEventListener('input', renderUsers);
+        function renderUsers() {
+            const b = document.getElementById('usersTbody');
+            const term = us.value.toLowerCase();
+            const ks = Object.keys(users);
+            if (!ks.length) { b.innerHTML = '<tr><td colspan="4">No users found.</td></tr>'; return; }
+            let h = '';
+            ks.forEach(k => {
+                const u = users[k]; const n = u.name || u.fullName || k; const em = u.email || 'N/A';
+                const r = u.role || 'passenger'; const j = u.assignedJeepney || u.assigned_jeepney || '-';
+                if (n.toLowerCase().includes(term) || em.toLowerCase().includes(term) || k.toLowerCase().includes(term)) {
+                    const bc = `badge-${r}`;
+                    h += `<tr>
+                        <td>
+                            <div style="font-weight:600; font-size:1.05rem;">${n}</div>
+                            <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">${em} • @${k}</div>
+                        </td>
+                        <td><span class="badge ${bc}">${r.toUpperCase()}</span></td>
+                        <td><strong style="color: ${r === 'operator' ? 'inherit' : 'var(--text-muted)'}; font-weight: 500;">
+                            ${r === 'operator' ? j : 'NONE'}
+                        </strong></td>
+                        <td style="text-align:right;">
+                            <button class="btn-outline btn-small" onclick="edt('${k}')">Modify</button>
+                            <button class="btn-danger btn-small" onclick="del('${k}')">Delete</button>
+                        </td>
+                    </tr>`;
                 }
             });
+            b.innerHTML = h || '<tr><td colspan="4">No matching users.</td></tr>';
         }
 
-        function renderDisplay(data) {
-            if (!data) {
-                document.getElementById('weight-display').innerText = '0';
-                document.getElementById('passenger-display').innerText = '0';
-                document.getElementById('gps-display').innerText = 'Waiting...';
-                document.getElementById('status').innerText = 'Select a jeepney to simulate';
-                document.getElementById('overload-msg').classList.remove('visible');
-                return;
-            }
+        document.getElementById('u-role').addEventListener('change', e => document.getElementById('u-jp-grp').style.display = e.target.value === 'operator' ? 'block' : 'none');
+        document.getElementById('e-role').addEventListener('change', e => document.getElementById('e-jp-grp').style.display = e.target.value === 'operator' ? 'block' : 'none');
 
-            const weight = data.current_weight || 0;
-            const passengers = data.passenger_count || 0;
-            const lat = data.latitude || 0;
-            const lng = data.longitude || 0;
+        // Form Processors
+        document.getElementById('usrForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const em = document.getElementById('u-email').value;
+            const nm = document.getElementById('u-name').value, rl = document.getElementById('u-role').value;
+            const jp = rl === 'operator' ? document.getElementById('u-jp').value : null;
+            const id = 'USR-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
+            try {
+                const d = { email: em, name: nm, role: rl, createdAt: Date.now() }; if (jp) d.assignedJeepney = jp;
+                await set(ref(db, `users/${id}`), d); msg('u-msg', 'User Added', 'success');
+                e.target.reset(); document.getElementById('u-jp-grp').style.display = 'none';
+            } catch (x) { msg('u-msg', 'Error adding user', 'error'); }
+        });
 
-            document.getElementById('weight-display').innerText = weight.toFixed(1);
-            document.getElementById('passenger-display').innerText = passengers;
-            document.getElementById('gps-display').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
-            document.getElementById('status').innerText = `Simulating: ${currentJeepId} • Last Update: ` + new Date().toLocaleTimeString();
+        window.edt = (id) => {
+            const u = users[id]; if (!u) return;
+            document.getElementById('e-id').value = id;
+            document.getElementById('e-name').value = u.name || u.fullName || '';
+            const r = u.role || 'passenger'; document.getElementById('e-role').value = r;
+            const jp = document.getElementById('e-jp-grp');
+            if (r === 'operator') { jp.style.display = 'block'; document.getElementById('e-jp').value = u.assignedJeepney || u.assigned_jeepney || ''; }
+            else jp.style.display = 'none';
+            document.getElementById('modal').style.display = 'flex';
+        };
 
-            // Checking Overload Conditions dynamically based on its Max Capacities
-            const maxWeight = data.max_weight_capacity || 1000;
-            const maxSeat = data.max_seat_capacity || 20;
+        document.getElementById('editForm').addEventListener('submit', async e => {
+            e.preventDefault();
+            const id = document.getElementById('e-id').value, nm = document.getElementById('e-name').value;
+            const rl = document.getElementById('e-role').value, jp = rl === 'operator' ? document.getElementById('e-jp').value : null;
+            try {
+                const u = { name: nm, role: rl }; if (rl === 'operator') { u.assignedJeepney = jp; u.assigned_jeepney = null; } else { u.assignedJeepney = null; u.assigned_jeepney = null; }
+                await update(ref(db, `users/${id}`), u); msg('e-msg', 'Saved', 'success'); setTimeout(() => document.getElementById('modal').style.display = 'none', 600);
+            } catch (x) { msg('e-msg', 'Error', 'error'); }
+        });
 
-            const isOverloaded = weight > maxWeight || passengers > maxSeat;
+        window.del = async (id) => { if (confirm(`Delete user ${id}?`)) await remove(ref(db, `users/${id}`)); };
 
-            const msg = document.getElementById('overload-msg');
-            if (isOverloaded) {
-                msg.classList.add('visible');
-            } else {
-                msg.classList.remove('visible');
-            }
+        function msg(id, txt, cls) {
+            const e = document.getElementById(id); e.textContent = txt; e.className = `msg ${cls}`;
+            setTimeout(() => e.style.display = 'none', 2500);
         }
-
-        // --- Extracted Update functions logic ---
-        window.updateWeight = (delta) => {
-            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
-            let newWeight = (currentData.current_weight || 0) + delta;
-            if (newWeight < 0) newWeight = 0;
-            update(ref(db, `jeepneys/${currentJeepId}`), { current_weight: newWeight, last_updated: Date.now() });
-        };
-
-        window.updatePassengers = (delta) => {
-            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
-            let newCount = (currentData.passenger_count || 0) + delta;
-            if (newCount < 0) newCount = 0;
-            update(ref(db, `jeepneys/${currentJeepId}`), { passenger_count: newCount, last_updated: Date.now() });
-        };
-
-        window.moveLocation = (latDelta, longDelta) => {
-            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
-            let newLat = (currentData.latitude || 14.7338) + latDelta;
-            let newLong = (currentData.longitude || 121.1249) + longDelta;
-            update(ref(db, `jeepneys/${currentJeepId}`), { latitude: newLat, longitude: newLong, last_updated: Date.now() });
-        };
-
-        window.window.resetData = () => {
-            if (!currentJeepId || !currentData) return alert("Please select a jeepney to simulate first.");
-            update(ref(db, `jeepneys/${currentJeepId}`), {
-                current_weight: 0,
-                passenger_count: 0,
-                is_overloaded: false,
-                last_updated: Date.now()
-            });
-        };
     </script>
 </body>
 
