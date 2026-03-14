@@ -81,15 +81,11 @@ class AuthService {
       final gsi.GoogleSignInAccount googleUser = await gsi.GoogleSignIn.instance.authenticate();
 
       // Obtain the auth details from the request
-      final gsi.GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final gsi.GoogleSignInAuthentication googleAuth = await googleUser.authentication;
       
-      // Request authorization token (access token)
-      final authzClient = googleUser.authorizationClient;
-      final authz = await authzClient.authorizationForScopes([]);
-
       // Create a new credential
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: authz?.accessToken,
+        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
       

@@ -880,6 +880,7 @@
     </div>
 
     <!-- SCRIPT -->
+    <script src="config.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
         import { getDatabase, ref, set, onValue, update, remove, off } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
@@ -917,15 +918,7 @@
         }
 
         // Firebase Setup
-        const app = initializeApp({
-            apiKey: "AIzaSyC-EEk3Yzap4oyQHGAOy_wNAn7HsoEX18U",
-            authDomain: "saferide-iot-app-c9d8f.firebaseapp.com",
-            databaseURL: "https://saferide-iot-app-c9d8f-default-rtdb.asia-southeast1.firebasedatabase.app",
-            projectId: "saferide-iot-app-c9d8f",
-            storageBucket: "saferide-iot-app-c9d8f.firebasestorage.app",
-            messagingSenderId: "818947733601",
-            appId: "1:818947733601:web:875b5a6292df7ae42c1220"
-        });
+        const app = initializeApp(window.firebaseConfigValues || firebaseConfigValues);
         const db = getDatabase(app);
 
         let jeeps = {}; let users = {};
