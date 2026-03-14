@@ -40,14 +40,14 @@ Follow these steps to set up the project locally.
 
 ### 1. Clone the Repository
 ```bash
-git clone https://github.com/your-username/saferide-iot-app.git
+git clone https://github.com/JoshSantosTIP/saferide-iot-app.git
 cd saferide-iot-app
 ```
 
 ### 2. Environment Variables & Secrets
 Because this project uses Firebase and external APIs, the sensitive keys are intentionally **not** pushed to GitHub. You must request the secret files from the project owner (or your team lead) and place them in the correct directories before building.
 
-1. **Obtain the secrets ZIP file** from your team lead.
+1. **Obtain the secrets ZIP file** from your team lead contact qjmsantos04@tip.edu.ph.
 2. Ensure you have the following files correctly placed:
    - Root directory: `.env` (contains the `ORS_API_KEY`)
    - Android: `android/app/google-services.json`
