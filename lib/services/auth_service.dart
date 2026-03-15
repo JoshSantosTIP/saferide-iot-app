@@ -32,6 +32,7 @@ class AuthService {
       profile = UserProfile(
         uid: user.uid,
         email: user.email ?? '',
+        name: user.displayName ?? user.email?.split('@').first ?? 'User',
         role: 'user', 
       );
       await _db.ref().child('users').child(user.uid).set(profile.toMap());
@@ -75,31 +76,36 @@ class AuthService {
 
   // Sign In with Google
   Future<UserProfile?> signInWithGoogle() async {
-    try {
-      // Trigger the authentication flow
-      // NOTE: In google_sign_in 7.x authenticate() is used.
-      final gsi.GoogleSignInAccount googleUser = await gsi.GoogleSignIn.instance.authenticate();
+    // Check BEFORE try-catch so the exception propagates to the caller (login screen).
+    final googleSignIn = gsi.GoogleSignIn.instance;
+    if (!googleSignIn.supportsAuthenticate()) {
+      throw Exception(
+        "Google Sign-In is not available on this platform. "
+        "Please use Email & Password, or test on an Android device.",
+      );
+    }
 
-      // Obtain the auth details from the request
-      final gsi.GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-      
-      // Create a new credential
+    try {
+      // Trigger the interactive sign-in flow.
+      final gsi.GoogleSignInAccount googleUser = await googleSignIn.authenticate();
+
+      // In v7.x, GoogleSignInAuthentication only has idToken, no accessToken.
+      final gsi.GoogleSignInAuthentication googleAuth = googleUser.authentication;
+
+      // Create Firebase credential using idToken only.
       final AuthCredential credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
         idToken: googleAuth.idToken,
       );
-      
-      // Once signed in, return the UserCredential
+
+      // Sign in to Firebase.
       UserCredential userCredential = await _auth.signInWithCredential(credential);
-      
+
       if (userCredential.user != null) {
         return await _ensureUserProfile(userCredential.user!);
       }
     } catch (e) {
-      print("Google Sign In Error: \$e");
-      // If user cancelled, authenticate() throws an exception (unlike older versions).
-      // return null to match expected behavior on cancellation
-      return null;
+      print("Google Sign In Error: $e");
+      rethrow; // Let the login screen handle and display all errors.
     }
     return null;
   }

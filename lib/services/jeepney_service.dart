@@ -3,6 +3,7 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../models/jeepney_data.dart';
+import '../models/user_profile.dart';
 
 class JeepneyService {
   final DatabaseReference _dbRef = FirebaseDatabase.instance.ref();
@@ -37,6 +38,8 @@ class JeepneyService {
         return JeepneyData(
           id: jeepId,
           route: 'Montalban - Cubao',
+          plateNumber: 'Unknown',
+          vehicleModel: 'Unknown',
           status: 'Available',
           currentWeight: 0,
           maxWeightCapacity: 1000,
@@ -170,6 +173,74 @@ class JeepneyService {
   Future<bool> checkJeepExists(String jeepId) async {
     final snapshot = await _dbRef.child('jeepneys/$jeepId').get();
     return snapshot.exists;
+  }
+
+  // Fetch Assigned Operator Profile for a Jeepney
+  Future<UserProfile?> getOperatorProfile(String jeepId) async {
+    DatabaseEvent event = await _dbRef
+        .child('users')
+        .orderByChild('role')
+        .equalTo('operator')
+        .once();
+
+    if (event.snapshot.value != null) {
+      final Map<dynamic, dynamic> usersMap =
+          event.snapshot.value as Map<dynamic, dynamic>;
+      
+      for (var entry in usersMap.entries) {
+        final userData = entry.value as Map<dynamic, dynamic>;
+        final assignedJeep = userData['assignedJeepney'] ?? userData['assigned_jeepney'];
+        
+        if (assignedJeep == jeepId) {
+          return UserProfile.fromMap(userData, entry.key.toString());
+        }
+      }
+    }
+    return null;
+  }
+
+  // Fetch all route polylines
+  Future<Map<String, List<Map<String, double>>>> getAllRoutes() async {
+    final snapshot = await _dbRef.child('routes').get();
+    if (!snapshot.exists || snapshot.value == null) return {};
+
+    final Map<dynamic, dynamic> routesMap = snapshot.value as Map<dynamic, dynamic>;
+    final result = <String, List<Map<String, double>>>{};
+
+    for (var entry in routesMap.entries) {
+      final routeId = entry.key.toString();
+      final routeData = entry.value as Map<dynamic, dynamic>;
+      final waypoints = routeData['waypoints'];
+      if (waypoints == null) continue;
+
+      final List<Map<String, double>> points = [];
+      if (waypoints is Map) {
+        // Waypoints stored as map with numeric keys
+        final sortedKeys = waypoints.keys.toList()
+          ..sort((a, b) => int.parse(a.toString()).compareTo(int.parse(b.toString())));
+        for (var key in sortedKeys) {
+          final wp = waypoints[key] as Map<dynamic, dynamic>;
+          points.add({
+            'lat': (wp['lat'] as num).toDouble(),
+            'lng': (wp['lng'] as num).toDouble(),
+          });
+        }
+      } else if (waypoints is List) {
+        for (var wp in waypoints) {
+          if (wp != null) {
+            points.add({
+              'lat': (wp['lat'] as num).toDouble(),
+              'lng': (wp['lng'] as num).toDouble(),
+            });
+          }
+        }
+      }
+
+      if (points.isNotEmpty) {
+        result[routeData['name']?.toString() ?? routeId] = points;
+      }
+    }
+    return result;
   }
 }
 

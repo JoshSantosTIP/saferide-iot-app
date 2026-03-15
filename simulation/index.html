@@ -728,6 +728,10 @@
                                     <input type="text" id="fl-route" required>
                                 </div>
                             </div>
+                            <div class="form-group">
+                                <label>Vehicle Model (e.g. Suzuki XR)</label>
+                                <input type="text" id="fl-model" placeholder="Model" required>
+                            </div>
                             <div class="grid-2">
                                 <div class="form-group"><label>Max Seats</label><input type="number" id="fl-seats"
                                         value="20" required></div>
@@ -771,7 +775,9 @@
                         <form id="usrForm">
                             <!-- Removed Username input -->
                             <div class="form-group"><label>Email</label><input type="email" id="u-email" required></div>
-                            <div class="form-group"><label>Full Name</label><input type="text" id="u-name" required>
+                            <div class="grid-2">
+                                <div class="form-group"><label>Full Name</label><input type="text" id="u-name" required></div>
+                                <div class="form-group"><label>Profile Picture URL</label><input type="url" id="u-pic" placeholder="https://..."></div>
                             </div>
                             <div class="form-group">
                                 <label>Role</label>
@@ -828,7 +834,10 @@
             <h2 class="card-title" style="margin-bottom: 24px;">Modify User Profile</h2>
             <form id="editForm">
                 <input type="hidden" id="e-id">
-                <div class="form-group"><label>Full Name</label><input type="text" id="e-name" required></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Full Name</label><input type="text" id="e-name" required></div>
+                    <div class="form-group"><label>Profile Picture URL</label><input type="url" id="e-pic" placeholder="https://..."></div>
+                </div>
                 <div class="form-group">
                     <label>Role</label>
                     <select id="e-role">
@@ -863,7 +872,10 @@
                     <div class="form-group"><label>Jeepney Name</label><input type="text" id="ej-name" required></div>
                     <div class="form-group"><label>Plate Number</label><input type="text" id="ej-plate" required></div>
                 </div>
-                <div class="form-group"><label>Route Description</label><input type="text" id="ej-route" required></div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Route Description</label><input type="text" id="ej-route" required></div>
+                    <div class="form-group"><label>Vehicle Model</label><input type="text" id="ej-model" required></div>
+                </div>
                 <div class="grid-2">
                     <div class="form-group"><label>Max Seats</label><input type="number" id="ej-seats" required></div>
                     <div class="form-group"><label>Max Weight (kg)</label><input type="number" id="ej-weight" required>
@@ -1054,10 +1066,11 @@
             e.preventDefault();
             const nm = document.getElementById('fl-name').value.trim();
             const pl = document.getElementById('fl-plate').value.trim(), r = document.getElementById('fl-route').value.trim();
+            const vm = document.getElementById('fl-model').value.trim();
             const s = parseInt(document.getElementById('fl-seats').value), w = parseInt(document.getElementById('fl-weight').value);
             const id = 'JPNY-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
             try {
-                await set(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: r, status: 'Available', current_weight: 0, max_weight_capacity: w, passenger_count: 0, max_seat_capacity: s, latitude: 14.7338, longitude: 121.1249, is_overloaded: false, last_updated: Date.now() });
+                await set(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: r, vehicle_model: vm, status: 'Available', current_weight: 0, max_weight_capacity: w, passenger_count: 0, max_seat_capacity: s, latitude: 14.7338, longitude: 121.1249, is_overloaded: false, last_updated: Date.now() });
                 msg('fl-msg', 'Added', 'success'); e.target.reset();
             } catch (x) { msg('fl-msg', 'Error', 'error'); }
         });
@@ -1069,6 +1082,7 @@
             document.getElementById('ej-name').value = j.name || '';
             document.getElementById('ej-plate').value = j.plate_number || id;
             document.getElementById('ej-route').value = j.route || '';
+            document.getElementById('ej-model').value = j.vehicle_model || '';
             document.getElementById('ej-seats').value = j.max_seat_capacity || 20;
             document.getElementById('ej-weight').value = j.max_weight_capacity || 1000;
             document.getElementById('jeepModal').style.display = 'flex';
@@ -1078,8 +1092,9 @@
             e.preventDefault();
             const id = document.getElementById('ej-id').value, nm = document.getElementById('ej-name').value, pl = document.getElementById('ej-plate').value;
             const rt = document.getElementById('ej-route').value, ms = parseInt(document.getElementById('ej-seats').value), mw = parseInt(document.getElementById('ej-weight').value);
+            const vm = document.getElementById('ej-model').value.trim();
             try {
-                await update(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: rt, max_seat_capacity: ms, max_weight_capacity: mw });
+                await update(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: rt, vehicle_model: vm, max_seat_capacity: ms, max_weight_capacity: mw });
                 msg('ej-msg', 'Saved', 'success');
                 setTimeout(() => document.getElementById('jeepModal').style.display = 'none', 600);
             } catch (x) { msg('ej-msg', 'Error', 'error'); }
@@ -1128,10 +1143,13 @@
             e.preventDefault();
             const em = document.getElementById('u-email').value;
             const nm = document.getElementById('u-name').value, rl = document.getElementById('u-role').value;
+            const pic = document.getElementById('u-pic').value.trim();
             const jp = rl === 'operator' ? document.getElementById('u-jp').value : null;
             const id = 'USR-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
             try {
-                const d = { email: em, name: nm, role: rl, createdAt: Date.now() }; if (jp) d.assignedJeepney = jp;
+                const d = { email: em, name: nm, role: rl, createdAt: Date.now() }; 
+                if (pic) d.profile_picture = pic;
+                if (jp) d.assignedJeepney = jp;
                 await set(ref(db, `users/${id}`), d); msg('u-msg', 'User Added', 'success');
                 e.target.reset(); document.getElementById('u-jp-grp').style.display = 'none';
             } catch (x) { msg('u-msg', 'Error adding user', 'error'); }
@@ -1141,6 +1159,7 @@
             const u = users[id]; if (!u) return;
             document.getElementById('e-id').value = id;
             document.getElementById('e-name').value = u.name || u.fullName || '';
+            document.getElementById('e-pic').value = u.profile_picture || '';
             const r = u.role || 'passenger'; document.getElementById('e-role').value = r;
             const jp = document.getElementById('e-jp-grp');
             if (r === 'operator') { jp.style.display = 'block'; document.getElementById('e-jp').value = u.assignedJeepney || u.assigned_jeepney || ''; }
@@ -1151,9 +1170,12 @@
         document.getElementById('editForm').addEventListener('submit', async e => {
             e.preventDefault();
             const id = document.getElementById('e-id').value, nm = document.getElementById('e-name').value;
+            const pic = document.getElementById('e-pic').value.trim();
             const rl = document.getElementById('e-role').value, jp = rl === 'operator' ? document.getElementById('e-jp').value : null;
             try {
-                const u = { name: nm, role: rl }; if (rl === 'operator') { u.assignedJeepney = jp; u.assigned_jeepney = null; } else { u.assignedJeepney = null; u.assigned_jeepney = null; }
+                const u = { name: nm, role: rl }; 
+                if (pic) u.profile_picture = pic;
+                if (rl === 'operator') { u.assignedJeepney = jp; u.assigned_jeepney = null; } else { u.assignedJeepney = null; u.assigned_jeepney = null; }
                 await update(ref(db, `users/${id}`), u); msg('e-msg', 'Saved', 'success'); setTimeout(() => document.getElementById('modal').style.display = 'none', 600);
             } catch (x) { msg('e-msg', 'Error', 'error'); }
         });

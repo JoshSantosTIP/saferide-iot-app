@@ -45,7 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (e) {
       if (mounted) {
         setState(() {
-          _errorMessage = "Sign in error: \${e.toString()}";
+          _errorMessage = e.toString().replaceFirst("Exception: ", "");
         });
       }
     } finally {
@@ -99,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Icon(
                 Icons.directions_bus_filled,
                 size: 64,
-                color: Color(0xFF0056D2),
+                color: Color(0xFF1A7D6F),
               ),
               const SizedBox(height: 24),
               const Text(
@@ -167,7 +167,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : () => _handleLogin(isGoogle: false),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0056D2),
+                    backgroundColor: const Color(0xFF1A7D6F),
                     foregroundColor: Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
@@ -227,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                            MaterialPageRoute(builder: (context) => const SignupScreen())
                          );
                      }, 
-                     child: const Text("Sign Up", style: TextStyle(color: Color(0xFF0056D2), fontWeight: FontWeight.bold))
+                     child: const Text("Sign Up", style: TextStyle(color: Color(0xFF1A7D6F), fontWeight: FontWeight.bold))
                    )
                 ],
               )

@@ -78,7 +78,7 @@ class _ConductorLoginScreenState extends State<ConductorLoginScreen> {
             const Icon(
               Icons.directions_bus_filled,
               size: 64,
-              color: Color(0xFF0056D2),
+              color: Color(0xFF1A7D6F),
             ),
             const SizedBox(height: 24),
             const Text(
@@ -118,7 +118,7 @@ class _ConductorLoginScreenState extends State<ConductorLoginScreen> {
               child: ElevatedButton(
                 onPressed: _isLoading ? null : _handleLogin,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0056D2),
+                  backgroundColor: const Color(0xFF1A7D6F),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

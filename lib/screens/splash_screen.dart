@@ -36,13 +36,13 @@ class _SplashScreenState extends State<SplashScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: const Color(0xFF0056D2).withValues(alpha: 0.1),
+                color: const Color(0xFF1A7D6F).withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: const Icon(
                 Icons.directions_bus,
                 size: 80,
-                color: Color(0xFF0056D2),
+                color: Color(0xFF1A7D6F),
               ),
             ),
             const SizedBox(height: 24),
@@ -51,13 +51,13 @@ class _SplashScreenState extends State<SplashScreen> {
               style: TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.bold,
-                color: Color(0xFF0056D2),
+                color: Color(0xFF1A7D6F),
                 letterSpacing: 1.5,
               ),
             ),
             const SizedBox(height: 16),
             const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF0056D2)),
+              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1A7D6F)),
             ),
           ],
         ),

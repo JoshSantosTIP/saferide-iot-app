@@ -2,11 +2,11 @@
 
 const firebaseConfigValues = {
   apiKey: "YOUR_FIREBASE_API_KEY",
-  authDomain: "saferide-iot-app.firebaseapp.com",
-  databaseURL: "https://saferide-iot-app-default-rtdb.firebaseio.com",
-  projectId: "saferide-iot-app",
-  storageBucket: "saferide-iot-app.firebasestorage.app",
-  messagingSenderId: "565039230538",
-  appId: "1:565039230538:web:7eed00de1de8b2b73ec473",
-  measurementId: "G-FDRYDE861S"
+  authDomain: "saferide-iot-app-c9d8f.firebaseapp.com",
+  databaseURL: "https://saferide-iot-app-c9d8f-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "saferide-iot-app-c9d8f",
+  storageBucket: "saferide-iot-app-c9d8f.firebasestorage.app",
+  messagingSenderId: "818947733601",
+  appId: "1:818947733601:web:875b5a6292df7ae42c1220",
+  measurementId: "G-GWFZR8CZ8P"
 };

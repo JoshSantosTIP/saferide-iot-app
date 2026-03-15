@@ -34,9 +34,9 @@ class SafeRideApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'Segoe UI', // Clean font
-        primaryColor: const Color(0xFF0056D2),
+        primaryColor: const Color(0xFF1A7D6F),
         scaffoldBackgroundColor: Colors.white,
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0056D2)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1A7D6F)),
         useMaterial3: true,
       ),
       home: const SplashScreen(),

@@ -172,7 +172,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                           height: 80,
                                           child: const Icon(
                                             Icons.directions_bus,
-                                            color: Color(0xFF0056D2),
+                                            color: Color(0xFF1A7D6F),
                                             size: 40,
                                           ),
                                         ),
@@ -230,7 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                                 icon: Icons.scale_rounded,
                                 color: weightLimitExceeded
                                     ? Colors.red
-                                    : const Color(0xFF0056D2),
+                                    : const Color(0xFF1A7D6F),
                                 isAlert: weightLimitExceeded,
                               ),
                             ),

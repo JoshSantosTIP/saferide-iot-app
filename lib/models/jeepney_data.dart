@@ -1,6 +1,8 @@
 class JeepneyData {
   final String id;
   final String route;
+  final String plateNumber;
+  final String vehicleModel;
   final String status; // "Available" or "Full"
   final double currentWeight;
   final double maxWeightCapacity;
@@ -20,6 +22,8 @@ class JeepneyData {
   JeepneyData({
     required this.id,
     required this.route,
+    required this.plateNumber,
+    required this.vehicleModel,
     required this.status,
     required this.currentWeight,
     required this.maxWeightCapacity,
@@ -41,6 +45,8 @@ class JeepneyData {
     return JeepneyData(
       id: id,
       route: map['route'] as String? ?? 'Montalban - San Mateo',
+      plateNumber: map['plate_number'] as String? ?? 'Unknown Plate',
+      vehicleModel: map['vehicle_model'] as String? ?? 'Standard Jeepney',
       status: map['status'] as String? ?? 'Available',
       currentWeight: (map['current_weight'] as num?)?.toDouble() ?? 0.0,
       maxWeightCapacity:
@@ -66,6 +72,8 @@ class JeepneyData {
   Map<String, dynamic> toJson() {
     return {
       'route': route,
+      'plate_number': plateNumber,
+      'vehicle_model': vehicleModel,
       'status': status,
       'current_weight': currentWeight,
       'max_weight_capacity': maxWeightCapacity,

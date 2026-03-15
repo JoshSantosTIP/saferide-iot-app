@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>SafeRide Route Editor</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', sans-serif; display: flex; height: 100vh; background: #f0f4f8; }
+
+        .sidebar {
+            width: 380px; background: #fff; display: flex; flex-direction: column;
+            border-right: 1px solid #e2e8f0; overflow: hidden;
+        }
+        .sidebar h2 { padding: 16px 20px; background: #1A7D6F; color: white; font-size: 16px; }
+        .controls { padding: 12px 16px; border-bottom: 1px solid #e2e8f0; display: flex; gap: 8px; flex-wrap: wrap; }
+        .controls button {
+            padding: 8px 14px; border: none; border-radius: 6px; font-size: 12px; cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-seed { background: #1A7D6F; color: white; }
+        .btn-osrm { background: #0284c7; color: white; }
+        .btn-clear { background: #ef4444; color: white; }
+        .btn-undo { background: #64748b; color: white; }
+        .btn-export { background: #7c3aed; color: white; }
+
+        .waypoint-list {
+            flex: 1; overflow-y: auto; padding: 8px;
+        }
+        .wp-item {
+            display: flex; align-items: center; padding: 6px 10px; margin: 2px 0;
+            background: #f8fafc; border-radius: 6px; font-size: 11px; gap: 8px;
+        }
+        .wp-item .num { font-weight: 700; color: #1A7D6F; min-width: 20px; }
+        .wp-item .coords { color: #64748b; flex: 1; }
+        .wp-item .name-input {
+            border: 1px solid #e2e8f0; border-radius: 4px; padding: 2px 6px;
+            font-size: 11px; width: 100px;
+        }
+        .wp-item .del { cursor: pointer; color: #ef4444; font-weight: bold; padding: 2px 6px; }
+
+        #map { flex: 1; }
+
+        .status-bar {
+            padding: 8px 16px; background: #1e293b; color: #10b981;
+            font-family: monospace; font-size: 12px; border-top: 1px solid #334155;
+        }
+
+        #log-panel {
+            max-height: 150px; overflow-y: auto; padding: 8px 16px;
+            background: #1e293b; color: #a3e635; font-family: monospace;
+            font-size: 11px; white-space: pre-wrap; border-top: 1px solid #334155;
+        }
+
+        .instructions {
+            padding: 10px 16px; background: #f0fdf4; border-bottom: 1px solid #bbf7d0;
+            font-size: 12px; color: #166534;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar">
+        <h2>🚌 Route Editor — Click Map to Add Points</h2>
+        <div class="instructions">
+            <strong>Instructions:</strong> Click on the map to add waypoints along the route.
+            Points are connected in order. Use "Snap to Roads" to make it follow streets.
+        </div>
+        <div class="controls">
+            <button class="btn-osrm" onclick="snapToRoads()">🛣️ Snap to Roads</button>
+            <button class="btn-seed" onclick="seedToFirebase()">🔥 Seed to Firebase</button>
+            <button class="btn-undo" onclick="undoLast()">↩ Undo</button>
+            <button class="btn-clear" onclick="clearAll()">🗑 Clear</button>
+            <button class="btn-export" onclick="exportCoords()">📋 Copy JSON</button>
+        </div>
+        <div class="waypoint-list" id="wpList"></div>
+        <div id="log-panel"></div>
+        <div class="status-bar" id="status">Click on the map to add waypoints</div>
+    </div>
+    <div id="map"></div>
+
+    <script src="config.js"></script>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
+        import { getDatabase, ref, set } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
+        const app = initializeApp(window.firebaseConfigValues || firebaseConfigValues);
+        const db = getDatabase(app);
+
+        const logEl = document.getElementById('log-panel');
+        function log(msg) { logEl.textContent += msg + '\n'; logEl.scrollTop = logEl.scrollHeight; }
+
+        // State
+        let waypoints = []; // { lat, lng, name, marker }
+        let polyline = null;
+        let snappedPolyline = null;  
+        let snappedPoints = null;
+
+        // Pre-load with the user's manually plotted points
+        const INITIAL_POINTS = [
+            { lat: 14.735332640289856, lng: 121.15449521666167, name: "Luvers Sakayan" },
+            { lat: 14.735394861396474, lng: 121.14617820693653, name: "" },
+            { lat: 14.728946347792439, lng: 121.14408906336715, name: "" },
+            { lat: 14.729324256831951, lng: 121.14229364994536, name: "" },
+            { lat: 14.729124122217735, lng: 121.14263342158347, name: "Highway Sakayan" },
+            { lat: 14.728813792350774, lng: 121.14403771260562, name: "Highway" },
+            { lat: 14.7116164403542, lng: 121.13378250861503, name: "" },
+        ];
+
+        // Map setup — centered on Rodriguez/Montalban
+        const map = L.map('map').setView([14.72, 121.10], 14);
+        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© OpenStreetMap'
+        }).addTo(map);
+
+        // Click to add waypoint
+        map.on('click', function (e) {
+            addWaypoint(e.latlng.lat, e.latlng.lng, '');
+        });
+
+        function addWaypoint(lat, lng, name) {
+            const marker = L.circleMarker([lat, lng], {
+                radius: 6, fillColor: '#1A7D6F', color: '#fff',
+                weight: 2, fillOpacity: 1
+            }).addTo(map);
+
+            const idx = waypoints.length;
+            marker.bindTooltip(`#${idx + 1}`, { permanent: true, direction: 'top', offset: [0, -8],
+                className: 'wp-tooltip' });
+
+            waypoints.push({ lat, lng, name, marker });
+            updatePolyline();
+            renderList();
+            document.getElementById('status').textContent =
+                `${waypoints.length} waypoints | Click map to add more`;
+        }
+
+        function updatePolyline() {
+            if (polyline) map.removeLayer(polyline);
+            if (waypoints.length > 1) {
+                const latlngs = waypoints.map(w => [w.lat, w.lng]);
+                polyline = L.polyline(latlngs, {
+                    color: '#1A7D6F', weight: 4, opacity: 0.6, dashArray: '8, 8'
+                }).addTo(map);
+            }
+        }
+
+        function renderList() {
+            const list = document.getElementById('wpList');
+            list.innerHTML = waypoints.map((wp, i) => `
+                <div class="wp-item">
+                    <span class="num">${i + 1}</span>
+                    <span class="coords">${wp.lat.toFixed(6)}, ${wp.lng.toFixed(6)}</span>
+                    <input class="name-input" placeholder="Name..."
+                        value="${wp.name}" onchange="window.setName(${i}, this.value)" />
+                    <span class="del" onclick="window.deleteWp(${i})">✕</span>
+                </div>
+            `).join('');
+            list.scrollTop = list.scrollHeight;
+        }
+
+        window.setName = (i, val) => { waypoints[i].name = val; };
+
+        window.deleteWp = (i) => {
+            map.removeLayer(waypoints[i].marker);
+            waypoints.splice(i, 1);
+            // Re-number tooltips
+            waypoints.forEach((w, idx) => {
+                w.marker.unbindTooltip();
+                w.marker.bindTooltip(`#${idx + 1}`, { permanent: true, direction: 'top',
+                    offset: [0, -8] });
+            });
+            updatePolyline();
+            renderList();
+        };
+
+        window.undoLast = () => {
+            if (waypoints.length === 0) return;
+            const last = waypoints.pop();
+            map.removeLayer(last.marker);
+            updatePolyline();
+            renderList();
+        };
+
+        window.clearAll = () => {
+            if (!confirm('Clear all waypoints?')) return;
+            waypoints.forEach(w => map.removeLayer(w.marker));
+            waypoints = [];
+            if (polyline) { map.removeLayer(polyline); polyline = null; }
+            if (snappedPolyline) { map.removeLayer(snappedPolyline); snappedPolyline = null; }
+            snappedPoints = null;
+            renderList();
+            document.getElementById('status').textContent = 'Cleared. Click map to start.';
+        };
+
+        // Decode OSRM polyline
+        function decodePolyline(encoded, precision = 5) {
+            const factor = Math.pow(10, precision);
+            let index = 0, lat = 0, lng = 0;
+            const coords = [];
+            while (index < encoded.length) {
+                let b, shift = 0, result = 0;
+                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+                lat += (result & 1) ? ~(result >> 1) : (result >> 1);
+                shift = 0; result = 0;
+                do { b = encoded.charCodeAt(index++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20);
+                lng += (result & 1) ? ~(result >> 1) : (result >> 1);
+                coords.push({ lat: lat / factor, lng: lng / factor });
+            }
+            return coords;
+        }
+
+        window.snapToRoads = async () => {
+            if (waypoints.length < 2) { alert('Need at least 2 waypoints'); return; }
+
+            document.getElementById('status').textContent = 'Snapping to roads via OSRM...';
+            log('Calling OSRM...');
+
+            const coords = waypoints.map(w => `${w.lng},${w.lat}`).join(';');
+            const url = `https://router.project-osrm.org/route/v1/driving/${coords}?overview=full&geometries=polyline`;
+
+            try {
+                const resp = await fetch(url);
+                const data = await resp.json();
+
+                if (data.code !== 'Ok') {
+                    log('OSRM error: ' + data.code);
+                    return;
+                }
+
+                snappedPoints = decodePolyline(data.routes[0].geometry, 5);
+                const dist = (data.routes[0].distance / 1000).toFixed(1);
+
+                log(`✅ ${snappedPoints.length} road points, ${dist} km`);
+
+                if (snappedPolyline) map.removeLayer(snappedPolyline);
+                snappedPolyline = L.polyline(
+                    snappedPoints.map(p => [p.lat, p.lng]),
+                    { color: '#1A7D6F', weight: 5, opacity: 0.9 }
+                ).addTo(map);
+
+                document.getElementById('status').textContent =
+                    `✅ Snapped! ${snappedPoints.length} road points, ${dist} km`;
+            } catch (e) {
+                log('Error: ' + e.message);
+            }
+        };
+
+        window.seedToFirebase = async () => {
+            const points = snappedPoints || waypoints.map(w => ({ lat: w.lat, lng: w.lng }));
+            if (points.length < 2) { alert('No route data! Add waypoints first.'); return; }
+
+            const routeName = prompt('Route name:', 'Montalban - Marikina') || 'Montalban - Marikina';
+            const routeId = routeName.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+
+            document.getElementById('status').textContent = 'Writing to Firebase...';
+
+            const routeData = {
+                name: routeName,
+                color: "#1A7D6F",
+                stops: {},
+                waypoints: {}
+            };
+
+            // Save named stops
+            waypoints.forEach((w, i) => {
+                routeData.stops[i] = { lat: w.lat, lng: w.lng, name: w.name };
+            });
+
+            // Save detailed road geometry
+            points.forEach((p, i) => {
+                routeData.waypoints[i] = { lat: p.lat, lng: p.lng };
+            });
+
+            try {
+                await set(ref(db, `routes/${routeId}`), routeData);
+                log(`✅ Seeded routes/${routeId} — ${points.length} points`);
+                document.getElementById('status').textContent = `✅ Saved! routes/${routeId}`;
+            } catch (e) {
+                log('Firebase error: ' + e.message);
+            }
+        };
+
+        window.exportCoords = () => {
+            const data = waypoints.map(w => ({ lat: w.lat, lng: w.lng, name: w.name }));
+            navigator.clipboard.writeText(JSON.stringify(data, null, 2));
+            document.getElementById('status').textContent = 'Copied JSON to clipboard!';
+        };
+
+        // Load initial points
+        INITIAL_POINTS.forEach(p => addWaypoint(p.lat, p.lng, p.name));
+        if (waypoints.length) map.fitBounds(waypoints.map(w => [w.lat, w.lng]), { padding: [50, 50] });
+    </script>
+</body>
+
+</html>

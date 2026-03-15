@@ -48,7 +48,7 @@ class NoJeepneyAssignedScreen extends StatelessWidget {
                 Navigator.of(context).pop();
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0056D2),
+                backgroundColor: const Color(0xFF1A7D6F),
                 foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(

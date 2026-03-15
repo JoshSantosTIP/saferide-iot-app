@@ -83,7 +83,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 ),
               );
             },
-            backgroundColor: const Color(0xFF0056D2),
+            backgroundColor: const Color(0xFF1A7D6F),
             foregroundColor: Colors.white,
             icon: const Icon(Icons.notifications_active_outlined),
             label: const Text("Notify Me"),
@@ -164,7 +164,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                           icon: Icons.event_seat_rounded,
                           color: isPassengerOverloaded
                               ? Colors.redAccent
-                              : const Color(0xFF0056D2),
+                              : const Color(0xFF1A7D6F),
                           isAlert: isPassengerOverloaded,
                         ),
                       ),
