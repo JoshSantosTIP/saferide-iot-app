@@ -1,6 +1,6 @@
 {
-    "name": "saferide_iot_app",
-    "short_name": "saferide_iot_app",
+    "name": "ParaGo",
+    "short_name": "ParaGo",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

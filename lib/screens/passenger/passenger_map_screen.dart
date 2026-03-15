@@ -1,4 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:http/http.dart' as http;
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -8,14 +11,8 @@ import '../../services/auth_service.dart';
 import '../../models/jeepney_data.dart';
 import '../../models/user_profile.dart';
 import '../splash_screen.dart';
+import '../login_screen.dart'; // Added import for LoginScreen
 import 'vehicle_details_screen.dart';
-
-// Sign-out redirect helper
-class _SplashRedirect extends StatelessWidget {
-  const _SplashRedirect();
-  @override
-  Widget build(BuildContext context) => const SplashScreen();
-}
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Home screen shown to passenger after login
@@ -34,6 +31,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
   Position? _userPosition;
   UserProfile? _userProfile;
   bool _isLocating = true;
+  bool _isLoading = false;
   String? _locationAddress;
 
   @override
@@ -41,6 +39,18 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
     super.initState();
     _loadUserProfile();
     _getUserLocation();
+  }
+
+  String get _displayName {
+    if (_userProfile?.name == null || _userProfile!.name.isEmpty) return 'Unknown';
+    return _userProfile!.name;
+  }
+
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
   }
 
   Future<void> _loadUserProfile() async {
@@ -72,11 +82,47 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
         return;
       }
 
-    final position = await Geolocator.getCurrentPosition();
-    setState(() {
-      _userPosition = position;
-      _isLocating = false;
-    });
+      final position = await Geolocator.getCurrentPosition();
+      setState(() {
+        _userPosition = position;
+        _isLocating = false;
+      });
+      _reverseGeocode(position.latitude, position.longitude);
+    } catch (e) {
+      setState(() => _isLocating = false);
+    }
+  }
+
+  Future<void> _reverseGeocode(double lat, double lng) async {
+    try {
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?lat=$lat&lon=$lng&format=json&addressdetails=1',
+      );
+      final response = await http.get(url, headers: {
+        'User-Agent': 'ParaGoApp/1.0',
+      });
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final address = data['address'] as Map<String, dynamic>?;
+        if (address != null && mounted) {
+          // Build a readable address from parts
+          final road = address['road'] ?? address['pedestrian'] ?? address['highway'];
+          final suburb = address['suburb'] ?? address['neighbourhood'] ?? address['village'];
+          final city = address['city'] ?? address['town'] ?? address['municipality'];
+          
+          final parts = <String>[];
+          if (road != null) parts.add(road.toString());
+          if (suburb != null) parts.add(suburb.toString());
+          if (city != null) parts.add(city.toString());
+          
+          if (parts.isNotEmpty) {
+            setState(() => _locationAddress = parts.join(', '));
+          }
+        }
+      }
+    } catch (e) {
+      // Silently fail — coordinates will be shown as fallback
+    }
   }
 
   String? _selectedJeepId;
@@ -85,36 +131,60 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF0F4F8),
-      body: Column(
+      body: Stack( // Wrapped body in a Stack
         children: [
-          // ── Teal header ──────────────────────────────────────────────────
-          _buildHeader(context),
+          Column(
+            children: [
+              // ── Teal header ──────────────────────────────────────────────────
+              _buildHeader(context),
 
-          // ── Scrollable body ──────────────────────────────────────────────
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Map card
-                  _buildMapCard(),
-                  const SizedBox(height: 16),
+              // ── Scrollable body ──────────────────────────────────────────────
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Map card
+                      _buildMapCard(),
+                      const SizedBox(height: 16),
 
-                  // Current location
-                  _buildLocationRow(),
-                  const SizedBox(height: 20),
+                      // Current location
+                      _buildLocationRow(),
+                      const SizedBox(height: 20),
 
-                  // Search / nearest bus stop
-                  _buildBusStopSearch(context),
-                  const SizedBox(height: 20),
+                      // Select route
+                      _buildRouteSelector(context),
+                      const SizedBox(height: 20),
 
-                  // Nearby jeepneys section
-                  _buildNearbyJeepneys(context),
-                ],
+                      // Nearby jeepneys section
+                      _buildNearbyJeepneys(context),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (_isLoading)
+            Container(
+              color: Colors.black.withOpacity(0.3),
+              child: const Center(
+                child: Card(
+                  elevation: 8,
+                  child: Padding(
+                    padding: EdgeInsets.all(24.0),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFF1A7D6F)),
+                        SizedBox(height: 16),
+                        Text("Logging out...", style: TextStyle(fontWeight: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
@@ -123,7 +193,6 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
   // ── HEADER ─────────────────────────────────────────────────────────────────
   Widget _buildHeader(BuildContext context) {
     return Container(
-      width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           colors: [Color(0xFF1A7D6F), Color(0xFF25A896)],
@@ -140,9 +209,12 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: CustomPaint(
-                size: const Size(double.infinity, 70),
-                painter: _CitySkylinePainter(),
+              child: SizedBox(
+                height: 70,
+                child: CustomPaint(
+                  size: Size(MediaQuery.of(context).size.width, 70),
+                  painter: _CitySkylinePainter(),
+                ),
               ),
             ),
 
@@ -168,21 +240,105 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.logout, color: Colors.white70, size: 22),
-                        onPressed: () async {
-                          await _authService.signOut();
-                          if (context.mounted) {
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(builder: (_) => const _SplashRedirect()),
-                              (_) => false,
-                            );
-                          }
+                        onPressed: () {
+                          final outerContext = context;
+                          showDialog(
+                            context: context,
+                            builder: (dialogContext) => Dialog(
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(16),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF1A7D6F).withOpacity(0.1),
+                                        shape: BoxShape.circle,
+                                      ),
+                                      child: const Icon(Icons.logout_rounded, color: Color(0xFF1A7D6F), size: 32),
+                                    ),
+                                    const SizedBox(height: 16),
+                                    const Text(
+                                      "Logout",
+                                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1A1A1A)),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      "Are you sure you want to sign out of your account?",
+                                      textAlign: TextAlign.center,
+                                      style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                                    ),
+                                    const SizedBox(height: 24),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: TextButton(
+                                            onPressed: () => Navigator.pop(dialogContext),
+                                            style: TextButton.styleFrom(
+                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            ),
+                                            child: Text("Cancel", style: TextStyle(color: Colors.grey[600], fontWeight: FontWeight.w600)),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 12),
+                                        Expanded(
+                                          child: ElevatedButton(
+                                            onPressed: () async {
+                                              print("[PassengerMapScreen] Logout confirmed by user");
+                                              Navigator.pop(dialogContext); // Close dialog
+                                              
+                                              setState(() => _isLoading = true); // Set _isLoading to true
+
+                                              try {
+                                                print("[PassengerMapScreen] Calling signOut with 5s timeout...");
+                                                await _authService.signOut().timeout(
+                                                  const Duration(seconds: 5),
+                                                  onTimeout: () => print("[PassengerMapScreen] signOut timed out!"),
+                                                );
+                                              } catch (e) {
+                                                print("[PassengerMapScreen] Error during signOut call: $e");
+                                              }
+
+                                              if (outerContext.mounted) {
+                                                print("[PassengerMapScreen] Navigating directly to LoginScreen...");
+                                                Navigator.of(outerContext).pushAndRemoveUntil(
+                                                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                                  (_) => false,
+                                                );
+                                              }
+                                              
+                                              // Fallback if navigation somehow fails
+                                              if (mounted) {
+                                                setState(() => _isLoading = false);
+                                              }
+                                            },
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: const Color(0xFFD32F2F),
+                                              foregroundColor: Colors.white,
+                                              elevation: 0,
+                                              padding: const EdgeInsets.symmetric(vertical: 14),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                            ),
+                                            child: const Text("Logout", style: TextStyle(fontWeight: FontWeight.bold)),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
                         },
                       ),
                     ],
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    "${_greeting()}, $_firstName",
+                    "${_greeting()}, $_displayName",
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
@@ -191,7 +347,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    "Track your nearest SafeRide jeepney.",
+                    "Track your nearest ParaGo jeepney.",
                     style: TextStyle(
                       fontSize: 14,
                       color: Colors.white70,
@@ -217,7 +373,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.10),
+            color: Colors.black.withOpacity(0.10),
             blurRadius: 16,
             offset: const Offset(0, 6),
           ),
@@ -243,7 +399,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.saferide.app',
+                    userAgentPackageName: 'com.parago.app',
                   ),
                   MarkerLayer(
                     markers: [
@@ -253,7 +409,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                         height: 40,
                         child: Container(
                           decoration: BoxDecoration(
-                            color: const Color(0xFF25A896).withValues(alpha: 0.25),
+                            color: const Color(0xFF25A896).withOpacity(0.25),
                             shape: BoxShape.circle,
                           ),
                           child: Center(
@@ -266,7 +422,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                                 border: Border.all(color: Colors.white, width: 3),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: Colors.black.withValues(alpha: 0.2),
+                                    color: Colors.black.withOpacity(0.2),
                                     blurRadius: 4,
                                   ),
                                 ],
@@ -292,7 +448,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.06),
+            color: Colors.black.withOpacity(0.06),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -303,7 +459,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF25A896).withValues(alpha: 0.12),
+              color: const Color(0xFF25A896).withOpacity(0.12),
               shape: BoxShape.circle,
             ),
             child: const Icon(Icons.my_location, color: Color(0xFF1A7D6F), size: 22),
@@ -339,68 +495,115 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
     );
   }
 
-  // ── SEARCH BUS STOP ────────────────────────────────────────────────────────
-  Widget _buildBusStopSearch(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => PassengerLiveMapScreen(userPosition: _userPosition),
+  // ── SELECT ROUTE ─────────────────────────────────────────────────────────
+  Widget _buildRouteSelector(BuildContext context) {
+    return FutureBuilder<Map<String, List<Map<String, double>>>>(
+      future: _jeepService.getAllRoutes(),
+      builder: (context, snapshot) {
+        final routes = snapshot.data?.keys.toList() ?? [];
+
+        return Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.06),
+                blurRadius: 10,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                "Select a Route",
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: Color(0xFF1A1A1A),
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                "Choose your jeepney route to view the live map",
+                style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+              ),
+              const SizedBox(height: 14),
+              if (routes.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                  child: Text(
+                    "No routes available",
+                    style: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                  ),
+                )
+              else
+                ...routes.map((route) => Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(12),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PassengerLiveMapScreen(
+                            userPosition: _userPosition,
+                            selectedRoute: route,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF25A896).withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF25A896).withOpacity(0.15),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFF25A896).withOpacity(0.15),
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.directions_bus,
+                              color: Color(0xFF1A7D6F),
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              route,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF1A1A1A),
+                              ),
+                            ),
+                          ),
+                          const Icon(
+                            Icons.arrow_forward_ios,
+                            color: Color(0xFF25A896),
+                            size: 16,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                )),
+            ],
           ),
         );
       },
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.06),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            ),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              "Search for nearest bus stop",
-              style: TextStyle(
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-                color: Color(0xFF1A1A1A),
-              ),
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF6B35).withValues(alpha: 0.15),
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Icon(Icons.directions_bus, color: Color(0xFFFF6B35), size: 20),
-                ),
-                const SizedBox(width: 12),
-                const Expanded(
-                  child: Text(
-                    "Find jeepneys near you",
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Color(0xFF555555),
-                    ),
-                  ),
-                ),
-                const Icon(Icons.chevron_right, color: Color(0xFF25A896)),
-              ],
-            ),
-          ],
-        ),
-      ),
     );
   }
 
@@ -490,6 +693,8 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
             : "${distKm.toStringAsFixed(1)} km away"
         : "Distance unknown";
 
+    final seatsLeft = jeep.maxSeatCapacity - jeep.passengerCount;
+
     return GestureDetector(
       onTap: () {
         Navigator.push(
@@ -510,7 +715,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+              color: Colors.black.withOpacity(0.05),
               blurRadius: 8,
               offset: const Offset(0, 3),
             ),
@@ -522,8 +727,8 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
               padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
                 color: jeep.status == 'Available'
-                    ? const Color(0xFF25A896).withValues(alpha: 0.12)
-                    : Colors.orange.withValues(alpha: 0.12),
+                    ? const Color(0xFF25A896).withOpacity(0.12)
+                    : Colors.orange.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Icon(
@@ -551,8 +756,29 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
                   ),
                   const SizedBox(height: 3),
                   Text(
-                    distStr,
+                    "$distStr  •  ${jeep.plateNumber}",
                     style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.event_seat,
+                        size: 14,
+                        color: seatsLeft > 0 ? const Color(0xFF25A896) : Colors.red[400],
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        seatsLeft > 0
+                            ? "$seatsLeft seat${seatsLeft == 1 ? '' : 's'} available"
+                            : "No seats available",
+                        style: TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: seatsLeft > 0 ? const Color(0xFF25A896) : Colors.red[400],
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -561,8 +787,8 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
               decoration: BoxDecoration(
                 color: jeep.status == 'Available'
-                    ? const Color(0xFF25A896).withValues(alpha: 0.12)
-                    : Colors.orange.withValues(alpha: 0.12),
+                    ? const Color(0xFF25A896).withOpacity(0.12)
+                    : Colors.orange.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
@@ -600,7 +826,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
 class _CitySkylinePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = Colors.white.withValues(alpha: 0.10);
+    final paint = Paint()..color = Colors.white.withOpacity(0.10);
 
     // Draw each building as a separate rect for simplicity
     final buildings = [
@@ -638,11 +864,13 @@ class _CitySkylinePainter extends CustomPainter {
 class PassengerLiveMapScreen extends StatefulWidget {
   final Position? userPosition;
   final String? initialSelectedJeepId;
+  final String? selectedRoute;
 
   const PassengerLiveMapScreen({
     super.key,
     this.userPosition,
     this.initialSelectedJeepId,
+    this.selectedRoute,
   });
 
   @override
@@ -657,6 +885,8 @@ class _PassengerLiveMapScreenState extends State<PassengerLiveMapScreen> {
   String? _selectedJeepId;
   JeepneyData? _selectedJeep;
   Map<String, List<LatLng>> _routes = {};
+  UserProfile? _operatorProfile;
+  bool _isLoading = false; // Added _isLoading state
 
   @override
   void initState() {
@@ -664,6 +894,16 @@ class _PassengerLiveMapScreenState extends State<PassengerLiveMapScreen> {
     _jeepsStream = _service.streamAllJeepneys();
     _selectedJeepId = widget.initialSelectedJeepId;
     _loadRoutes();
+    if (_selectedJeepId != null) {
+      _loadOperatorProfile(_selectedJeepId!);
+    }
+  }
+
+  Future<void> _loadOperatorProfile(String jeepId) async {
+    final profile = await _service.getOperatorProfile(jeepId);
+    if (mounted) {
+      setState(() => _operatorProfile = profile);
+    }
   }
 
   Future<void> _loadRoutes() async {
@@ -675,6 +915,16 @@ class _PassengerLiveMapScreenState extends State<PassengerLiveMapScreen> {
           points.map((p) => LatLng(p['lat']!, p['lng']!)).toList(),
         ));
       });
+      // Center map on selected route if specified
+      if (widget.selectedRoute != null && _routes.containsKey(widget.selectedRoute)) {
+        final points = _routes[widget.selectedRoute]!;
+        if (points.isNotEmpty) {
+          final bounds = LatLngBounds.fromPoints(points);
+          _mapController.fitCamera(
+            CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
+          );
+        }
+      }
     }
   }
 
@@ -704,11 +954,11 @@ class _PassengerLiveMapScreenState extends State<PassengerLiveMapScreen> {
               // Default center: User's location OR First jeep OR static location
               final centerLat =
                   selectedJeep?.latitude ??
-                  (_userPosition?.latitude ??
+                  (widget.userPosition?.latitude ??
                       (jeeps.isNotEmpty ? jeeps.first.latitude : 14.7338));
               final centerLng =
                   selectedJeep?.longitude ??
-                  (_userPosition?.longitude ??
+                  (widget.userPosition?.longitude ??
                       (jeeps.isNotEmpty ? jeeps.first.longitude : 121.1249));
 
           return Stack(
@@ -721,14 +971,15 @@ class _PassengerLiveMapScreenState extends State<PassengerLiveMapScreen> {
                   initialZoom: 15.0,
                   onTap: (_, _) {
                     setState(() {
-                      _selectedJeepId = null; // Deselect on map tap
+                      _selectedJeepId = null;
+                      _operatorProfile = null;
                     });
                   },
                 ),
                 children: [
                   TileLayer(
                     urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
-                    userAgentPackageName: 'com.saferide.app',
+                    userAgentPackageName: 'com.parago.app',
                   ),
                   // Route polylines
                   if (_routes.isNotEmpty)
@@ -761,7 +1012,9 @@ class _PassengerLiveMapScreenState extends State<PassengerLiveMapScreen> {
                           onTap: () {
                             setState(() {
                               _selectedJeepId = jeep.id;
+                              _operatorProfile = null;
                             });
+                            _loadOperatorProfile(jeep.id);
                           },
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -846,88 +1099,223 @@ class _PassengerLiveMapScreenState extends State<PassengerLiveMapScreen> {
                 ],
               ), // End FlutterMap
 
-          // 2. Back Button
+          // 2. Back Button + Route Capsule
           Positioned(
             top: 40,
             left: 20,
-            child: CircleAvatar(
-              backgroundColor: Colors.white,
-              child: IconButton(
-                icon: const Icon(Icons.arrow_back, color: Colors.black),
-                onPressed: () => Navigator.pop(context),
-              ),
+            right: 20,
+            child: Row(
+              children: [
+                CircleAvatar(
+                  backgroundColor: Colors.white,
+                  child: IconButton(
+                    icon: const Icon(Icons.arrow_back, color: Colors.black),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                ),
+                if (widget.selectedRoute != null) ...[
+                  const SizedBox(width: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A7D6F),
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.2),
+                          blurRadius: 8,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.route, color: Colors.white, size: 16),
+                        const SizedBox(width: 6),
+                        Text(
+                          widget.selectedRoute!,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
 
-          // 3. View Details Button (Conditional)
-          if (_selectedJeepId != null)
+          // 3. Details Card (Conditional)
+          if (_selectedJeepId != null && selectedJeep != null)
             Positioned(
-              bottom: 40,
-              left: 20,
-              right: 20,
-              child: GestureDetector(
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          VehicleDetailsScreen(jeepId: _selectedJeepId!),
+              bottom: 30,
+              left: 16,
+              right: 16,
+              child: Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.12),
+                      blurRadius: 24,
+                      offset: const Offset(0, 8),
                     ),
-                  );
-                },
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withValues(alpha: 0.15),
-                        blurRadius: 20,
-                        offset: const Offset(0, 10),
-                      ),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Text(
-                            "Jeepney Selected",
-                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                  ],
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // ── Status row: "Driver is on the way" + ETA ──
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          selectedJeep!.status == 'Available'
+                              ? "Driver is on the way"
+                              : "Jeepney is full",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF1A1A1A),
                           ),
-                          const SizedBox(height: 4),
-                          Text(
-                            "View Details for ${_selectedJeepId!.toUpperCase().replaceAll('_', ' ')}",
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: Color(0xFF1A1A1A),
+                        ),
+                        Text(
+                          "${(selectedJeep!.etaSeconds / 60).round()} min",
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF25A896),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 4),
+                    // ── Route name ──
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        selectedJeep!.route,
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey[600],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // ── Driver info + Plate ──
+                    Row(
+                      children: [
+                        // Driver avatar
+                        CircleAvatar(
+                          radius: 24,
+                          backgroundColor: const Color(0xFF25A896).withValues(alpha: 0.15),
+                          backgroundImage: _operatorProfile?.profilePictureUrl != null
+                              ? NetworkImage(_operatorProfile!.profilePictureUrl!)
+                              : null,
+                          child: _operatorProfile?.profilePictureUrl == null
+                              ? const Icon(Icons.person, color: Color(0xFF1A7D6F), size: 26)
+                              : null,
+                        ),
+                        const SizedBox(width: 12),
+                        // Driver name
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                _operatorProfile?.name ?? selectedJeep!.operatorName ?? 'Loading...',
+                                style: const TextStyle(
+                                  fontSize: 15,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF1A1A1A),
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Row(
+                                children: [
+                                  Icon(Icons.directions_bus, size: 14, color: Colors.grey[500]),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    "Driver",
+                                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Plate number + Vehicle model
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              selectedJeep!.plateNumber,
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF1A1A1A),
+                              ),
                             ),
+                            Text(
+                              selectedJeep!.vehicleModel,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey[500],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    // ── View Full Details button ──
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) =>
+                                  VehicleDetailsScreen(jeepId: _selectedJeepId!),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF25A896),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16), // Increased padding
+                          minimumSize: const Size(double.infinity, 54), // Explicit height and full width
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(30),
                           ),
-                        ],
-                      ),
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF0056D2),
-                          shape: BoxShape.circle,
+                          elevation: 0,
                         ),
-                        child: const Icon(
-                          Icons.arrow_forward,
-                          color: Colors.white,
+                        child: const Text(
+                          "View Full Details",
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
         ],
-      ),
-    );
+      ); // End inner Stack
+      }, // End StreamBuilder builder
+    ), // End StreamBuilder
+        ],
+      ), // End body Stack
+    ); // End Scaffold
   }
 }

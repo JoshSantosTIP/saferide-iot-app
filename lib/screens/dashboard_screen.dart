@@ -395,7 +395,6 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildAlertBanner(String message, IconData icon) {
     return Container(
-      width: double.infinity,
       color: Colors.redAccent,
       padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
       margin: const EdgeInsets.only(bottom: 1), // Separator if multiple

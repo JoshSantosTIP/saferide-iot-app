@@ -13,26 +13,55 @@ class AuthService {
   // Get current user profile from DB
   Future<UserProfile?> getUserProfile(String uid) async {
     try {
+      // First try direct UID lookup
       final snapshot = await _db.ref().child('users').child(uid).get();
       if (snapshot.exists && snapshot.value != null) {
         final data = snapshot.value as Map<dynamic, dynamic>;
         return UserProfile.fromMap(data, uid);
       }
+
+      // Fallback: search by email (for users created via admin panel with name-based keys)
+      final currentUser = _auth.currentUser;
+      if (currentUser?.email != null) {
+        final searchEmail = currentUser!.email!.toLowerCase();
+        final allUsersSnapshot = await _db.ref().child('users').get();
+        if (allUsersSnapshot.exists && allUsersSnapshot.value != null) {
+          final allUsers = allUsersSnapshot.value as Map<dynamic, dynamic>;
+          print("[AuthService] Fallback search: total users in DB = ${allUsers.length}");
+          for (var entry in allUsers.entries) {
+            final userData = entry.value;
+            if (userData is Map) {
+              final userEmail = (userData['email'] ?? '').toString().toLowerCase();
+              if (userEmail == searchEmail) {
+                print("[AuthService] Found match for email: $searchEmail under key: ${entry.key}");
+                final data = Map<dynamic, dynamic>.from(userData);
+                // If name is missing or "Unknown", try using the key (e.g., "Joshua Santos")
+                if (data['name'] == null || data['name'] == 'Unknown' || data['name'] == 'Unknown User') {
+                  data['name'] = entry.key.toString();
+                }
+                return UserProfile.fromMap(data, entry.key.toString());
+              }
+            }
+          }
+        }
+      }
     } catch (e) {
-      print("Error fetching user profile: \$e");
+      print("[AuthService] Exception in getUserProfile: $e");
     }
-    return null;
+    print("[AuthService] getUserProfile: Returning default profile for UID: $uid");
+    // Final fallback to avoid "Passenger" if user wants "Unknown"
+    return UserProfile(uid: uid, email: _auth.currentUser?.email ?? '', name: 'Unknown User', role: 'user');
   }
 
   // Create a default user profile if none exists
-  Future<UserProfile> _ensureUserProfile(User user) async {
+  Future<UserProfile> _ensureUserProfile(User user, {String? name}) async {
     UserProfile? profile = await getUserProfile(user.uid);
     if (profile == null) {
       // Create default profile for new user mapping them as "user" (passenger)
       profile = UserProfile(
         uid: user.uid,
         email: user.email ?? '',
-        name: user.displayName ?? user.email?.split('@').first ?? 'User',
+        name: name ?? user.displayName ?? user.email?.split('@').first ?? 'User',
         role: 'user', 
       );
       await _db.ref().child('users').child(user.uid).set(profile.toMap());
@@ -58,14 +87,14 @@ class AuthService {
   }
 
   // Sign Up with Email & Password
-  Future<UserProfile?> signUpWithEmail(String email, String password) async {
+  Future<UserProfile?> signUpWithEmail(String email, String password, {String? name}) async {
       try {
         UserCredential credential = await _auth.createUserWithEmailAndPassword(
           email: email,
           password: password,
         );
         if (credential.user != null) {
-          return await _ensureUserProfile(credential.user!);
+          return await _ensureUserProfile(credential.user!, name: name);
         }
       } catch (e) {
         print("Email Sign Up Error: \$e");
@@ -112,7 +141,15 @@ class AuthService {
 
   // Sign out
   Future<void> signOut() async {
-    await gsi.GoogleSignIn.instance.signOut();
+    print("[AuthService] signOut requested");
+    try {
+      await gsi.GoogleSignIn.instance.signOut();
+    } catch (e) {
+      print("[AuthService] Google Sign-In signOut failed (expected on web if not signed in via Google): $e");
+    }
     await _auth.signOut();
+    // Small delay to ensure firebase state propagages on web
+    await Future.delayed(const Duration(milliseconds: 500));
+    print("[AuthService] signOut completed");
   }
 }

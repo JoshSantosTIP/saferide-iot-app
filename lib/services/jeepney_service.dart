@@ -106,8 +106,8 @@ class JeepneyService {
   Future<void> _showOverloadNotification(String title, String body) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-          'saferide_alerts',
-          'SafeRide Alerts',
+          'parago_alerts',
+          'ParaGo Alerts',
           channelDescription: 'Notifications for vehicle overload status',
           importance: Importance.max,
           priority: Priority.high,

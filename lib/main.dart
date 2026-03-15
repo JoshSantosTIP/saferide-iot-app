@@ -21,16 +21,16 @@ void main() async {
     // In a real app, you might show an error screen or use a mock service
   }
 
-  runApp(const SafeRideApp());
+  runApp(const ParaGoApp());
 }
 
-class SafeRideApp extends StatelessWidget {
-  const SafeRideApp({super.key});
+class ParaGoApp extends StatelessWidget {
+  const ParaGoApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SafeRide',
+      title: 'ParaGo',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         fontFamily: 'Segoe UI', // Clean font

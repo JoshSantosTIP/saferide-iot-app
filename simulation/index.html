@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SafeRide - Premium Admin</title>
+    <title>ParaGo - Premium Admin</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -582,7 +582,7 @@
     <aside class="sidebar">
         <div class="brand">
             <div class="brand-indicator"></div>
-            SafeRide
+            ParaGo
         </div>
         <nav class="nav-menu">
             <a class="nav-link active" data-target="view-overview">Overview</a>
@@ -703,6 +703,7 @@
                     </div>
 
                     <button class="btn-primary" style="margin-top: 32px;" onclick="resetSim()">Reset Data</button>
+                    <button class="btn-outline" style="margin-top: 12px; width:100%;" onclick="distributeJeeps()">Distribute Jeeps Along Route</button>
                     <div style="text-align:center; font-size:0.85rem; color:var(--text-muted); margin-top:16px; font-weight: 500;"
                         id="sim-time">Disconnected</div>
                 </div>
@@ -935,6 +936,51 @@
 
         let jeeps = {}; let users = {};
         let sId = null; let sData = null; let sLis = null;
+        let routeWaypoints = []; // Array of {lat, lng}
+
+        // Fetch route waypoints for positioning jeeps
+        onValue(ref(db, 'routes'), s => {
+            const routes = s.val() || {};
+            routeWaypoints = [];
+            Object.values(routes).forEach(r => {
+                if (r.waypoints) {
+                    const wps = r.waypoints;
+                    // waypoints may be an object with numeric keys or an array
+                    const keys = Object.keys(wps).sort((a, b) => parseInt(a) - parseInt(b));
+                    keys.forEach(k => {
+                        if (wps[k] && wps[k].lat && wps[k].lng) {
+                            routeWaypoints.push({ lat: wps[k].lat, lng: wps[k].lng });
+                        }
+                    });
+                }
+            });
+        });
+
+        function getRoutePosition(index, total) {
+            if (routeWaypoints.length === 0) return { lat: 14.7338, lng: 121.1249 };
+            // Distribute evenly along the route
+            const step = Math.floor((routeWaypoints.length - 1) * index / Math.max(total - 1, 1));
+            const idx = Math.min(step, routeWaypoints.length - 1);
+            return routeWaypoints[idx];
+        }
+
+        function getRandomRoutePosition() {
+            if (routeWaypoints.length === 0) return { lat: 14.7338, lng: 121.1249 };
+            const idx = Math.floor(Math.random() * routeWaypoints.length);
+            return routeWaypoints[idx];
+        }
+
+        // Distribute all existing jeeps evenly along the route
+        window.distributeJeeps = async () => {
+            const ids = Object.keys(jeeps);
+            if (ids.length === 0) { alert('No jeeps registered!'); return; }
+            if (routeWaypoints.length === 0) { alert('No route data found! Seed a route first.'); return; }
+            for (let i = 0; i < ids.length; i++) {
+                const pos = getRoutePosition(i, ids.length);
+                await update(ref(db, `jeepneys/${ids[i]}`), { latitude: pos.lat, longitude: pos.lng, last_updated: Date.now() });
+            }
+            alert(`Distributed ${ids.length} jeep(s) along the route!`);
+        };
 
         // Fetchers
         onValue(ref(db, 'users'), s => { users = s.val() || {}; refreshData(); });
@@ -1045,7 +1091,8 @@
             const lat = sData.latitude || 14.7338, lng = sData.longitude || 121.1249;
             document.getElementById('sim-weight').innerText = w.toFixed(1);
             document.getElementById('sim-pax').innerText = p;
-            document.getElementById('sim-gps').innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            // Show address instead of coordinates
+            reverseGeocodeForSim(lat, lng);
 
             if (map && marker) {
                 marker.setLatLng([lat, lng]);
@@ -1054,6 +1101,31 @@
             document.getElementById('sim-time').innerText = `Last Updated: ${new Date().toLocaleTimeString()}`;
             if (w > mw) document.getElementById('sim-alert').classList.add('visible');
             else document.getElementById('sim-alert').classList.remove('visible');
+        }
+
+        let lastGeoLat = null, lastGeoLng = null, geoTimer = null;
+        function reverseGeocodeForSim(lat, lng) {
+            const el = document.getElementById('sim-gps');
+            // Show coords immediately, then try to resolve address
+            el.innerText = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
+            // Debounce and cache - only fetch if position changed significantly
+            if (lastGeoLat !== null && Math.abs(lat - lastGeoLat) < 0.0001 && Math.abs(lng - lastGeoLng) < 0.0001) return;
+            lastGeoLat = lat; lastGeoLng = lng;
+            clearTimeout(geoTimer);
+            geoTimer = setTimeout(async () => {
+                try {
+                    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
+                        headers: { 'User-Agent': 'ParaGoAdmin/1.0' }
+                    });
+                    const d = await r.json();
+                    const a = d.address || {};
+                    const road = a.road || a.pedestrian || a.highway || '';
+                    const area = a.suburb || a.neighbourhood || a.village || '';
+                    const city = a.city || a.town || a.municipality || '';
+                    const parts = [road, area, city].filter(Boolean);
+                    if (parts.length) el.innerText = parts.join(', ');
+                } catch (e) { /* keep coords */ }
+            }, 500);
         }
 
         window.changeW = (d) => { if (sData) update(ref(db, `jeepneys/${sId}`), { current_weight: Math.max(0, (sData.current_weight || 0) + d), last_updated: Date.now() }) };
@@ -1069,8 +1141,9 @@
             const vm = document.getElementById('fl-model').value.trim();
             const s = parseInt(document.getElementById('fl-seats').value), w = parseInt(document.getElementById('fl-weight').value);
             const id = 'JPNY-' + Date.now().toString(36).toUpperCase() + Math.random().toString(36).substring(2, 5).toUpperCase();
+            const pos = getRandomRoutePosition();
             try {
-                await set(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: r, vehicle_model: vm, status: 'Available', current_weight: 0, max_weight_capacity: w, passenger_count: 0, max_seat_capacity: s, latitude: 14.7338, longitude: 121.1249, is_overloaded: false, last_updated: Date.now() });
+                await set(ref(db, `jeepneys/${id}`), { name: nm, plate_number: pl, route: r, vehicle_model: vm, status: 'Available', current_weight: 0, max_weight_capacity: w, passenger_count: 0, max_seat_capacity: s, latitude: pos.lat, longitude: pos.lng, is_overloaded: false, last_updated: Date.now() });
                 msg('fl-msg', 'Added', 'success'); e.target.reset();
             } catch (x) { msg('fl-msg', 'Error', 'error'); }
         });

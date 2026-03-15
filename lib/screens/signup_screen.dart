@@ -9,6 +9,7 @@ class SignupScreen extends StatefulWidget {
 }
 
 class _SignupScreenState extends State<SignupScreen> {
+  final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
@@ -18,11 +19,12 @@ class _SignupScreenState extends State<SignupScreen> {
   String? _errorMessage;
 
   Future<void> _handleSignup() async {
+    final name = _nameController.text.trim();
     final email = _emailController.text.trim();
     final pwd = _passwordController.text.trim();
     final confirmPwd = _confirmPasswordController.text.trim();
 
-    if (email.isEmpty || pwd.isEmpty || confirmPwd.isEmpty) {
+    if (name.isEmpty || email.isEmpty || pwd.isEmpty || confirmPwd.isEmpty) {
       setState(() => _errorMessage = "Please fill in all fields");
       return;
     }
@@ -38,7 +40,7 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      final profile = await _authService.signUpWithEmail(email, pwd);
+      final profile = await _authService.signUpWithEmail(email, pwd, name: name);
       if (profile != null) {
         if (mounted) {
           // Show success and pop back to login screen
@@ -77,7 +79,7 @@ class _SignupScreenState extends State<SignupScreen> {
             children: [
               const SizedBox(height: 16),
               const Text(
-                "Join SafeRide",
+                "Join ParaGo",
                 style: TextStyle(
                   fontSize: 28,
                   fontWeight: FontWeight.bold,
@@ -108,6 +110,20 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
 
+              TextField(
+                controller: _nameController,
+                decoration: InputDecoration(
+                  labelText: "Full Name",
+                  prefixIcon: const Icon(Icons.person_outline),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  filled: true,
+                  fillColor: Colors.grey[50],
+                ),
+                textCapitalization: TextCapitalization.words,
+              ),
+              const SizedBox(height: 16),
               TextField(
                 controller: _emailController,
                 decoration: InputDecoration(
