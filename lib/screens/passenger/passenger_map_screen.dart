@@ -13,6 +13,7 @@ import '../../models/user_profile.dart';
 import '../splash_screen.dart';
 import '../login_screen.dart';
 import '../user_settings_screen.dart';
+import '../../widgets/chatbot_widget.dart';
 import 'vehicle_details_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -115,6 +116,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: const ChatbotFab(),
       body: Stack(
         children: [
           Column(
