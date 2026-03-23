@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'login_screen.dart';
 
 class NoJeepneyAssignedScreen extends StatelessWidget {
   final String userEmail;
@@ -35,7 +36,7 @@ class NoJeepneyAssignedScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              "Your operator account (\$userEmail) does not have a jeepney assigned to it in the database. Please contact the administrator to assign a vehicle.",
+              "Your operator account ($userEmail) does not have a jeepney assigned to it in the database. Please contact the administrator to assign a vehicle.",
               style: TextStyle(
                 fontSize: 16,
                 color: Colors.grey[700],
@@ -45,7 +46,10 @@ class NoJeepneyAssignedScreen extends StatelessWidget {
             const SizedBox(height: 32),
             ElevatedButton(
               onPressed: () {
-                Navigator.of(context).pop();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (route) => false,
+                );
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF2D6A1E),

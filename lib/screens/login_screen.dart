@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import '../../services/auth_service.dart';
 import '../../models/user_profile.dart';
-import 'passenger/passenger_map_screen.dart';
+import 'passenger/passenger_main_screen.dart';
 import 'dashboard_screen.dart';
 import 'no_jeepney_assigned_screen.dart';
 import 'signup_screen.dart';
@@ -22,7 +23,30 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   String? _errorMessage;
 
+  String _getFriendlyErrorMessage(String error) {
+    if (error.contains('invalid-credential') || error.contains('wrong-password') || error.contains('user-not-found')) {
+      return "The email or password you entered is incorrect.";
+    } else if (error.contains('invalid-email')) {
+      return "Please enter a valid email address.";
+    } else if (error.contains('user-disabled')) {
+      return "This account has been disabled. Please contact support.";
+    } else if (error.contains('too-many-requests')) {
+      return "Too many failed attempts. Please try again later.";
+    } else if (error.contains('network-request-failed')) {
+      return "Network error. Please check your internet connection.";
+    }
+    // Fallback: strip ugly firebase codes
+    return error.replaceAll(RegExp(r'\[.*?\]\s*'), '').replaceFirst("Exception: ", "").trim();
+  }
+
   Future<void> _handleLogin({bool isGoogle = false}) async {
+    if (!isGoogle) {
+      if (_emailController.text.trim().isEmpty || _passwordController.text.trim().isEmpty) {
+        setState(() => _errorMessage = "Please fill in all fields");
+        return;
+      }
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -43,7 +67,12 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(() => _errorMessage = e.toString().replaceFirst("Exception: ", ""));
+        final errorStr = e.toString();
+        if (errorStr.contains('popup-closed-by-user') || errorStr.contains('cancelled')) {
+          setState(() => _errorMessage = null);
+        } else {
+          setState(() => _errorMessage = _getFriendlyErrorMessage(errorStr));
+        }
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -62,24 +91,70 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } else {
       Navigator.pushReplacement(context,
-          MaterialPageRoute(builder: (_) => const PassengerMapScreen()));
+          MaterialPageRoute(builder: (_) => const PassengerMainScreen()));
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [Color(0xFFFFFFFF), Color(0xFFDFF0D8)],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
+      backgroundColor: Colors.white,
+      body: Stack(
+        children: [
+          // Base Gradient
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  colors: [Color(0xFFFFFFFF), Color(0xFFF5F9F3)],
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                ),
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: LayoutBuilder(
-            builder: (context, constraints) {
+          
+          // Floating Abstract Glow 1 (Top Right)
+          Positioned(
+            top: -50,
+            right: -100,
+            child: Container(
+              width: 350,
+              height: 350,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Color(0x1F2D6A1E), Colors.transparent],
+                  stops: [0.2, 1.0],
+                ),
+              ),
+            ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+             .scaleXY(end: 1.15, duration: 5.seconds, curve: Curves.easeInOut),
+          ),
+          
+          // Floating Abstract Glow 2 (Bottom Left)
+          Positioned(
+            bottom: -50,
+            left: -150,
+            child: Container(
+              width: 450,
+              height: 450,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: RadialGradient(
+                  colors: [Color(0x142D6A1E), Colors.transparent],
+                  stops: [0.1, 1.0],
+                ),
+              ),
+            ).animate(onPlay: (controller) => controller.repeat(reverse: true))
+             .slideX(begin: 0, end: 0.1, duration: 7.seconds, curve: Curves.easeInOut)
+             .slideY(begin: 0, end: -0.05, duration: 7.seconds, curve: Curves.easeInOut),
+          ),
+
+          // Main Content
+          SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
               return SingleChildScrollView(
                 child: ConstrainedBox(
                   // Ensures the column is at least as tall as the visible area
@@ -98,7 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             height: 160,
                             fit: BoxFit.contain,
                           ),
-                        ),
+                        ).animate().fadeIn(duration: 800.ms).slideY(begin: -0.15, curve: Curves.easeOutBack),
 
                         const SizedBox(height: 28),
 
@@ -106,15 +181,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24),
                           child: Container(
-                            padding: const EdgeInsets.fromLTRB(24, 28, 24, 28),
+                            padding: const EdgeInsets.fromLTRB(28, 36, 28, 36),
                             decoration: BoxDecoration(
                               color: Colors.white,
-                              borderRadius: BorderRadius.circular(28),
+                              borderRadius: BorderRadius.circular(36),
                               boxShadow: [
                                 BoxShadow(
-                                  color: Colors.black.withOpacity(0.07),
-                                  blurRadius: 28,
-                                  offset: const Offset(0, 8),
+                                  color: const Color(0xFF2D6A1E).withOpacity(0.08),
+                                  blurRadius: 40,
+                                  offset: const Offset(0, 12),
                                 ),
                               ],
                             ),
@@ -122,15 +197,24 @@ class _LoginScreenState extends State<LoginScreen> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 const Text(
-                                  "Sign In to continue",
+                                  "Welcome Back",
                                   style: TextStyle(
-                                    fontSize: 20,
+                                    fontSize: 24,
                                     fontWeight: FontWeight.bold,
                                     color: Color(0xFF1A1A1A),
                                   ),
                                   textAlign: TextAlign.center,
                                 ),
-                                const SizedBox(height: 24),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Sign in to continue to ParaGo",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
+                                  ),
+                                  textAlign: TextAlign.center,
+                                ),
+                                const SizedBox(height: 32),
 
                                 // Error banner
                                 if (_errorMessage != null) ...[
@@ -170,17 +254,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                 // Primary button
                                 SizedBox(
-                                  height: 52,
+                                  height: 56,
                                   child: ElevatedButton(
                                     onPressed: _isLoading ? null : () => _handleLogin(),
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF2D6A1E),
                                       foregroundColor: Colors.white,
-                                      elevation: 3,
-                                      shadowColor: const Color(0xFF2D6A1E).withOpacity(0.35),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(30),
-                                      ),
+                                      elevation: 0,
+                                      shape: const StadiumBorder(),
                                     ),
                                     child: _isLoading
                                         ? const SizedBox(
@@ -206,7 +287,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   children: [
                                     Expanded(child: Divider(color: Colors.grey.shade200)),
                                     Padding(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                                      padding: const EdgeInsets.symmetric(horizontal: 16),
                                       child: Text("OR",
                                           style: TextStyle(
                                               color: Colors.grey.shade400,
@@ -222,28 +303,30 @@ class _LoginScreenState extends State<LoginScreen> {
 
                                 // Google button
                                 SizedBox(
-                                  height: 48,
-                                  child: OutlinedButton.icon(
+                                  height: 56,
+                                  child: ElevatedButton.icon(
                                     onPressed: _isLoading ? null : () => _handleLogin(isGoogle: true),
                                     icon: const Icon(Icons.g_mobiledata,
-                                        size: 26, color: Color(0xFF2D6A1E)),
+                                        size: 28, color: Color(0xFF2D6A1E)),
                                     label: const Text(
-                                      "Sign in with Google",
+                                      "Continue with Google",
                                       style: TextStyle(
-                                          color: Color(0xFF2D6A1E),
-                                          fontSize: 14,
+                                          color: Color(0xFF1A1A1A),
+                                          fontSize: 15,
                                           fontWeight: FontWeight.w600),
                                     ),
-                                    style: OutlinedButton.styleFrom(
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius: BorderRadius.circular(30)),
-                                      side: const BorderSide(color: Color(0xFF2D6A1E), width: 1.5),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.white,
+                                      foregroundColor: Colors.black87,
+                                      elevation: 1, // subtle depth
+                                      shadowColor: Colors.black.withOpacity(0.2),
+                                      shape: const StadiumBorder(),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
-                          ),
+                          ).animate(delay: 200.ms).fadeIn(duration: 600.ms).slideY(begin: 0.1, curve: Curves.easeOut),
                         ),
 
                         // ── Spacer (push link down with consistent padding) ─
@@ -251,28 +334,28 @@ class _LoginScreenState extends State<LoginScreen> {
 
                         // ── Register link — always stays above safe area ────
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 20),
+                          padding: const EdgeInsets.only(bottom: 24),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Text(
                                 "Don't have an account?  ",
-                                style: TextStyle(color: Colors.grey[600], fontSize: 14),
+                                style: TextStyle(color: Colors.grey[600], fontSize: 15),
                               ),
                               GestureDetector(
                                 onTap: () => Navigator.push(context,
                                     MaterialPageRoute(builder: (_) => const SignupScreen())),
                                 child: const Text(
-                                  "Register",
+                                  "Create one",
                                   style: TextStyle(
                                     color: Color(0xFF2D6A1E),
                                     fontWeight: FontWeight.bold,
-                                    fontSize: 14,
+                                    fontSize: 15,
                                   ),
                                 ),
                               ),
                             ],
-                          ),
+                          ).animate(delay: 600.ms).fadeIn(duration: 500.ms).slideY(begin: 0.1),
                         ),
                       ],
                     ),
@@ -282,6 +365,7 @@ class _LoginScreenState extends State<LoginScreen> {
             },
           ),
         ),
+        ],
       ),
     );
   }
@@ -297,24 +381,33 @@ class _LoginScreenState extends State<LoginScreen> {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF4FAF2),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFD8EDD3), width: 1.2),
+        borderRadius: BorderRadius.circular(30),
       ),
       child: TextField(
         controller: controller,
         keyboardType: keyboardType,
         obscureText: obscureText,
-        style: const TextStyle(fontSize: 14.5, color: Color(0xFF1A1A1A)),
+        style: const TextStyle(fontSize: 15, color: Color(0xFF1A1A1A)),
         decoration: InputDecoration(
           labelText: label,
           labelStyle: TextStyle(color: Colors.grey[500], fontSize: 13),
           floatingLabelStyle: const TextStyle(color: Color(0xFF2D6A1E), fontSize: 12),
-          border: InputBorder.none,
-          contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 15),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: BorderSide.none,
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(30),
+            borderSide: const BorderSide(color: Color(0xFF2D6A1E), width: 1.5),
+          ),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 18),
           suffixIcon: suffixIcon != null
-              ? GestureDetector(
-                  onTap: onSuffixTap,
-                  child: Icon(suffixIcon, color: Colors.grey[400], size: 20),
+              ? Padding(
+                  padding: const EdgeInsets.only(right: 8.0),
+                  child: GestureDetector(
+                    onTap: onSuffixTap,
+                    child: Icon(suffixIcon, color: Colors.grey[400], size: 22),
+                  ),
                 )
               : null,
         ),

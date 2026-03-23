@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
-import 'passenger/passenger_map_screen.dart';
+import 'onboarding_screen.dart';
+import 'passenger/passenger_main_screen.dart';
 import 'dashboard_screen.dart';
 import 'no_jeepney_assigned_screen.dart';
 
@@ -27,10 +28,10 @@ class _SplashScreenState extends State<SplashScreen> {
     if (!mounted) return;
 
     if (!widget.allowAutoLogin) {
-      print("[SplashScreen] Auto-login disabled by flag. Redirecting to LoginScreen.");
+      print("[SplashScreen] Auto-login disabled by flag. Redirecting to OnboardingScreen.");
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
       return;
     }
@@ -40,7 +41,7 @@ class _SplashScreenState extends State<SplashScreen> {
       // Not logged in
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        MaterialPageRoute(builder: (context) => const OnboardingScreen()),
       );
       return;
     }
@@ -83,7 +84,7 @@ class _SplashScreenState extends State<SplashScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const PassengerMapScreen(),
+            builder: (context) => const PassengerMainScreen(),
           ),
         );
       }

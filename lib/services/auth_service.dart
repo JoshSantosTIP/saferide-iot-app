@@ -1,7 +1,9 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_database/firebase_database.dart';
-import 'package:google_sign_in/google_sign_in.dart' as gsi;
+import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/user_profile.dart';
+
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -105,32 +107,28 @@ class AuthService {
 
   // Sign In with Google
   Future<UserProfile?> signInWithGoogle() async {
-    // Check BEFORE try-catch so the exception propagates to the caller (login screen).
-    final googleSignIn = gsi.GoogleSignIn.instance;
-    if (!googleSignIn.supportsAuthenticate()) {
-      throw Exception(
-        "Google Sign-In is not available on this platform. "
-        "Please use Email & Password, or test on an Android device.",
-      );
-    }
-
     try {
-      // Trigger the interactive sign-in flow.
-      final gsi.GoogleSignInAccount googleUser = await googleSignIn.authenticate();
+      if (kIsWeb) {
+        // Native Firebase Auth popup for Flutter Web.
+        final googleProvider = GoogleAuthProvider();
+        UserCredential userCredential = await _auth.signInWithPopup(googleProvider);
+        if (userCredential.user != null) {
+          return await _ensureUserProfile(userCredential.user!);
+        }
+      } else {
+        // Mobile platform code (google_sign_in v7.2.0+)
+        final googleSignIn = GoogleSignIn.instance;
+        final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
 
-      // In v7.x, GoogleSignInAuthentication only has idToken, no accessToken.
-      final gsi.GoogleSignInAuthentication googleAuth = googleUser.authentication;
+        final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+        final AuthCredential credential = GoogleAuthProvider.credential(
+          idToken: googleAuth.idToken,
+        );
 
-      // Create Firebase credential using idToken only.
-      final AuthCredential credential = GoogleAuthProvider.credential(
-        idToken: googleAuth.idToken,
-      );
-
-      // Sign in to Firebase.
-      UserCredential userCredential = await _auth.signInWithCredential(credential);
-
-      if (userCredential.user != null) {
-        return await _ensureUserProfile(userCredential.user!);
+        UserCredential userCredential = await _auth.signInWithCredential(credential);
+        if (userCredential.user != null) {
+          return await _ensureUserProfile(userCredential.user!);
+        }
       }
     } catch (e) {
       print("Google Sign In Error: $e");
@@ -143,7 +141,10 @@ class AuthService {
   Future<void> signOut() async {
     print("[AuthService] signOut requested");
     try {
-      await gsi.GoogleSignIn.instance.signOut();
+      if (!kIsWeb) {
+        final googleSignIn = GoogleSignIn.instance;
+        await googleSignIn.signOut();
+      }
     } catch (e) {
       print("[AuthService] Google Sign-In signOut failed (expected on web if not signed in via Google): $e");
     }

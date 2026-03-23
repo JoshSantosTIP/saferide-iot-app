@@ -1,9 +1,13 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../models/jeepney_data.dart';
 import '../services/jeepney_service.dart';
+import '../services/auth_service.dart';
+import '../widgets/chatbot_widget.dart';
+import 'login_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   final String jeepId;
@@ -23,6 +27,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // Passenger alerts
   List<Map<String, dynamic>> _alerts = [];
   late StreamSubscription _alertSubscription;
+  bool _isLoggingOut = false;
 
   @override
   void initState() {
@@ -122,375 +127,472 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              height: 32,
-              fit: BoxFit.contain,
-            ),
-            const SizedBox(width: 12),
-            Text(
-              widget.jeepId.toUpperCase().replaceAll('_', ' '),
-              style: const TextStyle(
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-          ],
-        ),
-        centerTitle: true,
-        backgroundColor: Colors.white,
-        elevation: 0,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black87),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: StreamBuilder<JeepneyData>(
-        stream: _jeepStream,
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final data = snapshot.data!;
-          final isPassengerOverloaded =
-              data.passengerCount >= data.maxSeatCapacity;
-          final bool weightLimitExceeded =
-              data.currentWeight > data.maxWeightCapacity;
-
-          return Column(
+      backgroundColor: const Color(0xFFF9FBF9), // Premium light background
+      floatingActionButton: const ChatbotFab(), // Add AI Assistant for Operator
+      body: Stack(
+        children: [
+          Column(
             children: [
-              // 1. Overload Alert Banners
-              if (weightLimitExceeded)
-                _buildAlertBanner(
-                  "WEIGHT LIMIT EXCEEDED!",
-                  Icons.monitor_weight_outlined,
-                ),
-              if (isPassengerOverloaded)
-                _buildAlertBanner(
-                  "PASSENGER LIMIT EXCEEDED!",
-                  Icons.groups_rounded,
-                ),
-
-              // 2. Passenger Alert Banners
-              ..._alerts.map((alert) => _buildPassengerAlertBanner(alert)),
-
+              _buildHeader(context),
               Expanded(
-                child: SingleChildScrollView(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                child: StreamBuilder<JeepneyData>(
+                  stream: _jeepStream,
+                  builder: (context, snapshot) {
+                    if (!snapshot.hasData) {
+                      return const Center(child: CircularProgressIndicator(color: Color(0xFF2D6A1E)));
+                    }
+
+                    final data = snapshot.data!;
+                    final isWeightOverloaded = data.isWeightOverloaded;
+                    final isSafe = data.isSafe;
+                    final loadPercent = data.weightLoadPercentage;
+
+                    return Column(
                       children: [
-                        // Map Card
-                        Container(
-                          height: MediaQuery.of(context).size.height * 0.35,
-                          decoration: BoxDecoration(
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.1),
-                                blurRadius: 15,
-                                offset: const Offset(0, 5),
-                              ),
-                            ],
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(20),
-                            child: Stack(
+                        // 1. Safety & Passenger Alerts
+                        Expanded(
+                          child: SingleChildScrollView(
+                            padding: const EdgeInsets.fromLTRB(24, 12, 24, 40),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                FlutterMap(
-                                  mapController: _mapController,
-                                  options: MapOptions(
-                                    initialCenter: LatLng(
-                                      data.latitude,
-                                      data.longitude,
-                                    ),
-                                    initialZoom: 16.0,
+                                // Safety Banner (Weight)
+                                _buildSafetyStatusBanner(isSafe, isWeightOverloaded),
+                                
+                                // Passenger Alerts
+                                if (_alerts.isNotEmpty) ...[
+                                  const SizedBox(height: 16),
+                                  const Text(
+                                    "PASSENGER REQUESTS",
+                                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
                                   ),
+                                  const SizedBox(height: 8),
+                                  ..._alerts.map((alert) => _buildPassengerAlertCard(alert)),
+                                ],
+                                
+                                const SizedBox(height: 24),
+
+                                // Map Card
+                                _buildMinimapCard(data),
+                                const SizedBox(height: 24),
+
+                                // Stats Grid
+                                Row(
                                   children: [
-                                    TileLayer(
-                                      urlTemplate:
-                                          'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                                    Expanded(
+                                      child: _buildMetricCard(
+                                        icon: Icons.event_seat_rounded,
+                                        label: "Seats",
+                                        value: "${data.passengerCount}",
+                                        sub: "Occupied",
+                                        isCritical: false,
+                                        primary: true,
+                                      ),
                                     ),
-                                    MarkerLayer(
-                                      markers: [
-                                        Marker(
-                                          point: LatLng(
-                                            data.latitude,
-                                            data.longitude,
-                                          ),
-                                          width: 80,
-                                          height: 80,
-                                          child: const Icon(
-                                            Icons.directions_bus,
-                                            color: Color(0xFF2D6A1E),
-                                            size: 40,
-                                          ),
-                                        ),
-                                      ],
+                                    const SizedBox(width: 16),
+                                    Expanded(
+                                      child: _buildMetricCard(
+                                        icon: Icons.monitor_weight_outlined,
+                                        label: "Payload",
+                                        value: "${loadPercent.toStringAsFixed(0)}%",
+                                        sub: "Capacity",
+                                        isCritical: isWeightOverloaded,
+                                        primary: false,
+                                      ),
                                     ),
                                   ],
                                 ),
-                                Positioned(
-                                  bottom: 16,
-                                  right: 16,
-                                  child: FloatingActionButton.small(
-                                    backgroundColor: Colors.white,
-                                    child: const Icon(
-                                      Icons.my_location,
-                                      color: Colors.black87,
-                                    ),
-                                    onPressed: () {
-                                      _animatedMapMove(
-                                        LatLng(data.latitude, data.longitude),
-                                        16.0,
-                                      );
-                                    },
-                                  ),
+                                const SizedBox(height: 24),
+
+                                // Vehicle Details
+                                const Text(
+                                  "VEHICLE READINGS",
+                                  style: TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Colors.grey, letterSpacing: 1.0),
                                 ),
+                                const SizedBox(height: 12),
+                                _buildReadingsCard(data),
                               ],
                             ),
                           ),
                         ),
-
-                        const SizedBox(height: 24),
-
-                        // Stats Grid
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _buildStatCard(
-                                title: "PASSENGERS",
-                                value: "${data.passengerCount}",
-                                subValue: "/ ${data.maxSeatCapacity}",
-                                icon: Icons.groups_rounded,
-                                color: isPassengerOverloaded
-                                    ? Colors.red
-                                    : const Color(0xFF00C853),
-                                isAlert: isPassengerOverloaded,
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: _buildStatCard(
-                                title: "WEIGHT",
-                                value:
-                                    data.currentWeight.toStringAsFixed(0),
-                                subValue: "kg",
-                                icon: Icons.scale_rounded,
-                                color: weightLimitExceeded
-                                    ? Colors.red
-                                    : const Color(0xFF2D6A1E),
-                                isAlert: weightLimitExceeded,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Vehicle Details
-                        Container(
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.05),
-                                blurRadius: 10,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              _buildInfoRow(
-                                Icons.pin_drop_rounded,
-                                "Route",
-                                data.route,
-                              ),
-                              const Divider(height: 24),
-                              _buildInfoRow(
-                                Icons.speed_rounded,
-                                "Speed",
-                                "${data.speed.toStringAsFixed(1)} km/h",
-                              ),
-                              const Divider(height: 24),
-                              _buildInfoRow(
-                                Icons.access_time_rounded,
-                                "Last Updated",
-                                _formatTimestamp(data.lastUpdated),
-                              ),
-                            ],
-                          ),
+                      ],
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          if (_isLoggingOut)
+            Container(
+              color: Colors.black.withOpacity(0.4),
+              child: const Center(
+                child: Card(
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.all(Radius.circular(24))),
+                  child: Padding(
+                    padding: EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircularProgressIndicator(color: Color(0xFF2D6A1E)),
+                        SizedBox(height: 24),
+                        Text(
+                          "Ending shift...",
+                          style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: Color(0xFF111827)),
                         ),
                       ],
                     ),
                   ),
                 ),
               ),
-            ],
-          );
-        },
+            ),
+        ],
       ),
     );
   }
 
-  // ── Passenger Alert Banner ────────────────────────────────────────────────
-  Widget _buildPassengerAlertBanner(Map<String, dynamic> alert) {
-    final type = alert['type'] ?? 'unknown';
-    final message = alert['message'] ?? 'Alert from passenger';
-    final name = alert['passengerName'] ?? 'A passenger';
-    final timestamp = alert['timestamp'] as int? ?? 0;
-    final alertId = alert['id'] as String;
-    final color = _alertColor(type);
-
+  Widget _buildHeader(BuildContext context) {
     return Container(
-      color: color.withOpacity(0.95),
-      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
-      margin: const EdgeInsets.only(bottom: 1),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+          child: Row(
+            children: [
+              Image.asset('assets/images/logo.png', height: 40),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Operator Dashboard",
+                      style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF2D6A1E), letterSpacing: 0.5),
+                    ),
+                    Text(
+                      widget.jeepId.toUpperCase().replaceAll('_', ' '),
+                      style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF111827), letterSpacing: -0.5),
+                    ),
+                  ],
+                ),
+              ),
+              GestureDetector(
+                onTap: _handleLogout,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFF5F5),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFFECACA)),
+                  ),
+                  child: const Icon(Icons.logout_rounded, color: Color(0xFFD32F2F), size: 20),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _handleLogout() async {
+    setState(() => _isLoggingOut = true);
+    try {
+      await AuthService().signOut();
+      if (mounted) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error logging out: $e')),
+        );
+        setState(() => _isLoggingOut = false);
+      }
+    }
+  }
+
+  // ── Safety Status Banner ──────────────────────────────────────────────────
+  Widget _buildSafetyStatusBanner(bool isSafe, bool isWeightOverloaded) {
+    final banner = Container(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+      decoration: BoxDecoration(
+        color: isSafe ? const Color(0xFFF3FBF5) : const Color(0xFFFFF5F5),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isSafe ? const Color(0xFFD0F0D8) : const Color(0xFFFECACA),
+          width: 1.5,
+        ),
+      ),
       child: Row(
         children: [
-          Icon(_alertIcon(type), color: Colors.white, size: 22),
-          const SizedBox(width: 10),
+          Icon(
+            isSafe ? Icons.gpp_good_rounded : Icons.warning_amber_rounded,
+            color: isSafe ? const Color(0xFF2D6A1E) : const Color(0xFFD32F2F),
+            size: 22,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              isSafe 
+                ? "Vehicle is within safe weight limits." 
+                : "Safety Alert: Vehicle weight limit exceeded!",
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: isSafe ? const Color(0xFF18331A) : const Color(0xFF991B1B),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (isWeightOverloaded) {
+      return banner.animate(onPlay: (controller) => controller.repeat(reverse: true))
+          .tint(color: Colors.red.withOpacity(0.05), duration: 2.seconds);
+    }
+    return banner;
+  }
+
+  // ── Passenger Alert Card ──────────────────────────────────────────────────
+  Widget _buildPassengerAlertCard(Map<String, dynamic> alert) {
+    final String type = alert['type'] as String? ?? 'unknown';
+    final String message = alert['message'] as String? ?? 'Alert from passenger';
+    final String name = alert['passengerName'] as String? ?? 'A passenger';
+    final int timestamp = alert['timestamp'] as int? ?? 0;
+    final String alertId = alert['id'] as String? ?? '';
+    final Color color = _alertColor(type);
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.black.withOpacity(0.04)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(_alertIcon(type), color: color, size: 20),
+          ),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   message,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Color(0xFF111827)),
                 ),
+                const SizedBox(height: 2),
                 Text(
                   "$name • ${_timeAgo(timestamp)}",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.8),
-                    fontSize: 11,
-                  ),
+                  style: TextStyle(color: Colors.grey[500], fontSize: 11, fontWeight: FontWeight.w500),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: const Icon(Icons.close, color: Colors.white, size: 20),
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints(),
-            onPressed: () {
-              _service.dismissAlert(widget.jeepId, alertId);
-            },
+            icon: Icon(Icons.check_circle_outline_rounded, color: Colors.grey[400], size: 22),
+            onPressed: () => _service.dismissAlert(widget.jeepId, alertId),
           ),
         ],
+      ),
+    ).animate(key: ValueKey(alertId))
+     .slideX(begin: 0.1, end: 0, duration: 400.ms, curve: Curves.easeOutCubic)
+     .fadeIn();
+  }
+
+  // ── Minimap Card ──────────────────────────────────────────────────────────
+  Widget _buildMinimapCard(JeepneyData data) {
+    return Container(
+      height: 240,
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.black.withOpacity(0.04), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(24),
+        child: Stack(
+          children: [
+            FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: LatLng(data.latitude, data.longitude),
+                initialZoom: 16.0,
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: LatLng(data.latitude, data.longitude),
+                      width: 60,
+                      height: 60,
+                      child: const Icon(Icons.location_on, color: Color(0xFFD32F2F), size: 36),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            Positioned(
+              bottom: 16,
+              right: 16,
+              child: GestureDetector(
+                onTap: () => _animatedMapMove(LatLng(data.latitude, data.longitude), 16.0),
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4)),
+                    ],
+                  ),
+                  child: const Icon(Icons.my_location, color: Color(0xFF111827), size: 20),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildStatCard({
-    required String title,
-    required String value,
-    required String subValue,
+  // ── Metric Card ───────────────────────────────────────────────────────────
+  Widget _buildMetricCard({
     required IconData icon,
-    required Color color,
-    required bool isAlert,
+    required String label,
+    required String value,
+    required String sub,
+    required bool isCritical,
+    required bool primary,
   }) {
-    return Container(
+    final color = isCritical ? const Color(0xFFD32F2F) : (primary ? const Color(0xFF2D6A1E) : const Color(0xFFF59E0B));
+    
+    final card = Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: isAlert ? color.withOpacity(0.1) : Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
         border: Border.all(
-          color: isAlert ? color : Colors.transparent,
-          width: 2,
+          color: isCritical ? color.withOpacity(0.3) : Colors.black.withOpacity(0.04),
+          width: 1.5,
         ),
         boxShadow: [
           BoxShadow(
-            color: color.withOpacity(0.1),
+            color: isCritical ? color.withOpacity(0.05) : Colors.black.withOpacity(0.02),
             blurRadius: 15,
-            offset: const Offset(0, 5),
+            offset: const Offset(0, 8),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, color: color, size: 28),
-          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 20),
+          ),
+          const SizedBox(height: 16),
           Text(
-            title,
+            value,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              color: Colors.grey[600],
-              letterSpacing: 1.0,
+              fontSize: 28,
+              fontWeight: FontWeight.w900,
+              color: isCritical ? color : const Color(0xFF111827),
             ),
           ),
-          const SizedBox(height: 4),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.baseline,
-            textBaseline: TextBaseline.alphabetic,
-            children: [
-              Text(
-                value,
-                style: TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.bold,
-                  color: color,
-                ),
-              ),
-              const SizedBox(width: 4),
-              Text(
-                subValue,
-                style: TextStyle(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.grey[500],
-                ),
-              ),
-            ],
+          Text(
+            sub,
+            style: TextStyle(fontSize: 12, color: Colors.grey[500], fontWeight: FontWeight.w600),
           ),
+        ],
+      ),
+    );
+
+    if (isCritical) {
+      return card.animate(onPlay: (controller) => controller.repeat(reverse: true))
+          .scale(duration: 3.seconds, begin: const Offset(1, 1), end: const Offset(1.01, 1.01), curve: Curves.easeInOut);
+    }
+    return card;
+  }
+
+  // ── Readings Card ─────────────────────────────────────────────────────────
+  Widget _buildReadingsCard(JeepneyData data) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.black.withOpacity(0.04), width: 1.5),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          _buildReadingRow(Icons.speed_rounded, "Velocity", "${data.speed.toStringAsFixed(1)} km/h"),
+          const Divider(height: 32, thickness: 1),
+          _buildReadingRow(Icons.scale_rounded, "Gross Weight", "${data.currentWeight.toStringAsFixed(0)} kg"),
+          const Divider(height: 32, thickness: 1),
+          _buildReadingRow(Icons.pin_drop_rounded, "Route", data.route),
+          const Divider(height: 32, thickness: 1),
+          _buildReadingRow(Icons.access_time_rounded, "Last Ping", _formatTimestamp(data.lastUpdated)),
         ],
       ),
     );
   }
 
-  Widget _buildInfoRow(IconData icon, String label, String value) {
+  Widget _buildReadingRow(IconData icon, String label, String value) {
     return Row(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.grey[100],
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(icon, size: 20, color: Colors.grey[600]),
+          decoration: BoxDecoration(color: const Color(0xFFF3FBF5), borderRadius: BorderRadius.circular(10)),
+          child: Icon(icon, size: 18, color: const Color(0xFF2D6A1E)),
         ),
         const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              label,
-              style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-            ),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-          ],
+        Expanded(
+          child: Text(label, style: TextStyle(color: Colors.grey[500], fontSize: 14, fontWeight: FontWeight.w600)),
+        ),
+        Text(
+          value,
+          style: const TextStyle(fontWeight: FontWeight.w800, color: Color(0xFF111827), fontSize: 14),
         ),
       ],
     );
@@ -499,29 +601,5 @@ class _DashboardScreenState extends State<DashboardScreen>
   String _formatTimestamp(int timestamp) {
     final date = DateTime.fromMillisecondsSinceEpoch(timestamp);
     return "${date.hour}:${date.minute.toString().padLeft(2, '0')}:${date.second.toString().padLeft(2, '0')}";
-  }
-
-  Widget _buildAlertBanner(String message, IconData icon) {
-    return Container(
-      color: Colors.redAccent,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-      margin: const EdgeInsets.only(bottom: 1),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(icon, color: Colors.white),
-          const SizedBox(width: 8),
-          Text(
-            message,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-              fontSize: 14,
-              letterSpacing: 1.0,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

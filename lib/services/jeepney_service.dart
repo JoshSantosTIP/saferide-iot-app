@@ -15,7 +15,7 @@ class JeepneyService {
   factory JeepneyService() => _instance;
   JeepneyService._internal();
 
-  bool _wasOverloaded = false;
+  final Map<String, bool> _overloadStates = {};
 
   // Initialize Notifications
   Future<void> initializeNotifications() async {
@@ -75,30 +75,29 @@ class JeepneyService {
 
   // Task 2: Incoming - Check for alerts within the stream listener (side effect)
   // Or handled in UI. Here we implement the check logic function as requested.
-  // Task 2: Incoming - Check for alerts within the stream listener (side effect)
-  // Or handled in UI. Here we implement the check logic function as requested.
-  bool checkOverload(double weight, double maxWeight, int count, int maxCount) {
+  bool checkOverload(String jeepId, double weight, double maxWeight, int count, int maxCount) {
     bool isWeightOverloaded = weight > maxWeight;
     bool isPassengerOverloaded = count > maxCount;
     bool isOverloaded = isWeightOverloaded || isPassengerOverloaded;
 
-    // Trigger notification if state changes from False to True
-    // We track overall overload state for the return, but notifications are specific
-    if (isOverloaded && !_wasOverloaded) {
+    final wasOverloaded = _overloadStates[jeepId] ?? false;
+
+    // Trigger notification if state changes from False to True for THIS jeepney
+    if (isOverloaded && !wasOverloaded) {
       if (isWeightOverloaded) {
         _showOverloadNotification(
           'WEIGHT LIMIT EXCEEDED',
-          'Vehicle weight is above capacity!',
+          'Vehicle $jeepId weight is above capacity!',
         );
       }
       if (isPassengerOverloaded) {
         _showOverloadNotification(
           'PASSENGER LIMIT EXCEEDED',
-          'Maximum passenger count reached!',
+          'Vehicle $jeepId: Maximum passenger count reached!',
         );
       }
     }
-    _wasOverloaded = isOverloaded;
+    _overloadStates[jeepId] = isOverloaded;
 
     return isOverloaded;
   }

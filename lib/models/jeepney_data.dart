@@ -87,4 +87,16 @@ class JeepneyData {
       'route_description': routeDescription,
     };
   }
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  bool get isPassengerOverloaded => passengerCount >= maxSeatCapacity;
+
+  bool get isWeightOverloaded => isOverloaded || currentWeight > maxWeightCapacity;
+
+  bool get isSafe => !isPassengerOverloaded && !isWeightOverloaded;
+
+  int get availableSeats => (maxSeatCapacity - passengerCount).clamp(0, maxSeatCapacity);
+
+  double get weightLoadPercentage => (currentWeight / maxWeightCapacity * 100).clamp(0, 999.0);
 }

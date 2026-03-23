@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_service.dart';
 import '../models/user_profile.dart';
@@ -6,7 +7,9 @@ import 'login_screen.dart';
 
 class UserSettingsScreen extends StatefulWidget {
   final UserProfile? userProfile;
-  const UserSettingsScreen({super.key, this.userProfile});
+  final bool isTab; // Added to handle tab usage vs standalone
+  
+  const UserSettingsScreen({super.key, this.userProfile, this.isTab = false});
 
   @override
   State<UserSettingsScreen> createState() => _UserSettingsScreenState();
@@ -29,173 +32,164 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     final email = FirebaseAuth.instance.currentUser?.email ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7F4),
+      backgroundColor: const Color(0xFFF9FBF9), // Match the extremely light background
       body: Stack(
         children: [
-          CustomScrollView(
-            slivers: [
-              // ── App Bar ────────────────────────────────────────────────────────────
-              SliverAppBar(
-                expandedHeight: 200,
-                pinned: true,
-                backgroundColor: const Color(0xFF2D6A1E),
-                leading: IconButton(
-                  icon: const Icon(Icons.arrow_back, color: Colors.white),
-                  onPressed: () => Navigator.pop(context),
-                ),
-                flexibleSpace: FlexibleSpaceBar(
-                  background: Container(
-                    decoration: const BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [Color(0xFF2D6A1E), Color(0xFF4BA028)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
+          SafeArea(
+            bottom: false,
+            // If it's a tab, we already have a global safe area and logo above, just add normal padding.
+            // If it's NOT a tab, add standard top padding for the back button and header.
+            child: SingleChildScrollView(
+              padding: EdgeInsets.fromLTRB(24, widget.isTab ? 20 : 16, 24, 120),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                   // Standalone App Bar / Back Button
+                  if (!widget.isTab) ...[
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black.withOpacity(0.05)),
+                        ),
+                        child: const Icon(Icons.arrow_back_rounded, color: Color(0xFF18331A)),
                       ),
                     ),
-                    child: SafeArea(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const SizedBox(height: 32),
-                          // Avatar
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Colors.white.withOpacity(0.2),
-                              border: Border.all(color: Colors.white, width: 2.5),
-                            ),
-                            child: ClipOval(
-                              child: profile?.profilePictureUrl != null
-                                  ? Image.network(profile!.profilePictureUrl!, fit: BoxFit.cover)
-                                  : const Icon(Icons.person, color: Colors.white, size: 36),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            profile?.name ?? 'User',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Text(
-                            email,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.75),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
+                    const SizedBox(height: 24),
+                  ],
 
-              // ── Content ──────────────────────────────────────────────────────────────
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  // ── Header Profile Info ──────────────────────────────────────
+                  Row(
                     children: [
-                      // ── Notifications ──────────────────────────────────────────
-                      _sectionHeader("Notifications"),
-                      const SizedBox(height: 10),
-                      _settingsCard([
-                        _toggleTile(
-                          icon: Icons.notifications_active_outlined,
-                          iconColor: const Color(0xFF2D6A1E),
-                          title: "Push Notifications",
-                          subtitle: "Get alerts about your tracked jeepneys",
-                          value: _notificationsEnabled,
-                          onChanged: (v) => setState(() => _notificationsEnabled = v),
+                      Container(
+                        width: 72,
+                        height: 72,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: const Color(0xFFEFF7EA),
+                          border: Border.all(color: const Color(0xFF2D6A1E), width: 2),
                         ),
-                        _divider(),
-                        _toggleTile(
-                          icon: Icons.warning_amber_rounded,
-                          iconColor: Colors.orange,
-                          title: "Crowd Alerts",
-                          subtitle: "Notify when a jeepney is almost full",
-                          value: _crowdAlertEnabled,
-                          onChanged: (v) => setState(() => _crowdAlertEnabled = v),
+                        child: ClipOval(
+                          child: profile?.profilePictureUrl != null
+                              ? Image.network(profile!.profilePictureUrl!, fit: BoxFit.cover)
+                              : const Icon(Icons.person, color: Color(0xFF2D6A1E), size: 36),
                         ),
-                        _divider(),
-                        _toggleTile(
-                          icon: Icons.near_me,
-                          iconColor: const Color(0xFF4BA028),
-                          title: "Nearby Jeepney Alerts",
-                          subtitle: "Alert when a jeepney is within 200m",
-                          value: _nearbyAlertsEnabled,
-                          onChanged: (v) => setState(() => _nearbyAlertsEnabled = v),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              profile?.name ?? 'Account Info',
+                              style: const TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.w900,
+                                color: Color(0xFF101828),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              email,
+                              style: TextStyle(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFF2D6A1E).withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                profile?.isOperator == true ? 'Operator' : 'Passenger',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.bold,
+                                  color: Color(0xFF2D6A1E),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ]),
-
-                      const SizedBox(height: 20),
-
-                      // ── Location ──────────────────────────────────────────────
-                      _sectionHeader("Location"),
-                      const SizedBox(height: 10),
-                      _settingsCard([
-                        _toggleTile(
-                          icon: Icons.location_on_outlined,
-                          iconColor: const Color(0xFF2D6A1E),
-                          title: "Share My Location",
-                          subtitle: "Used for distance and ETA calculations",
-                          value: _locationEnabled,
-                          onChanged: (v) => setState(() => _locationEnabled = v),
-                        ),
-                      ]),
-
-                      const SizedBox(height: 20),
-
-                      // ── Display ────────────────────────────────────────────────
-                      _sectionHeader("Display"),
-                      const SizedBox(height: 10),
-                      _settingsCard([
-                        _toggleTile(
-                          icon: Icons.map_outlined,
-                          iconColor: const Color(0xFF2D6A1E),
-                          title: "Dark Map Style",
-                          subtitle: "Use a darker map tile for better contrast",
-                          value: _darkMapEnabled,
-                          onChanged: (v) => setState(() => _darkMapEnabled = v),
-                        ),
-                      ]),
-
-                      const SizedBox(height: 20),
-
-                      // ── Account ───────────────────────────────────────────────
-                      _sectionHeader("Account"),
-                      const SizedBox(height: 10),
-                      _settingsCard([
-                        _actionTile(
-                          icon: Icons.info_outline,
-                          iconColor: const Color(0xFF4BA028),
-                          title: "App Version",
-                          trailing: const Text(
-                            "v1.0.0",
-                            style: TextStyle(color: Colors.grey, fontSize: 13),
-                          ),
-                        ),
-                        _divider(),
-                        _actionTile(
-                          icon: Icons.logout_rounded,
-                          iconColor: Colors.redAccent,
-                          title: "Sign Out",
-                          titleColor: Colors.redAccent,
-                          onTap: () => _confirmLogout(context),
-                        ),
-                      ]),
+                      ),
                     ],
-                  ),
-                ),
+                  ).animate().fadeIn(duration: 600.ms).slideX(begin: -0.1, curve: Curves.easeOutCubic),
+                  const SizedBox(height: 36),
+
+                  // ── Settings Content ──────────────────────────────────────────
+                  _sectionHeader("Preferences").animate(delay: 200.ms).fadeIn(),
+                  const SizedBox(height: 12),
+                  _settingsCard([
+                    _toggleTile(
+                      icon: Icons.notifications_active_outlined,
+                      title: "Push Notifications",
+                      value: _notificationsEnabled,
+                      onChanged: (v) => setState(() => _notificationsEnabled = v),
+                    ),
+                    _divider(),
+                    _toggleTile(
+                      icon: Icons.location_on_outlined,
+                      title: "Share Location",
+                      value: _locationEnabled,
+                      onChanged: (v) => setState(() => _locationEnabled = v),
+                    ),
+                  ]).animate(delay: 300.ms).fadeIn(duration: 500.ms).slideY(begin: 0.1, curve: Curves.easeOutCubic),
+                  
+                  const SizedBox(height: 24),
+                  _sectionHeader("Alerts & Map").animate(delay: 400.ms).fadeIn(),
+                  const SizedBox(height: 12),
+                  _settingsCard([
+                    _toggleTile(
+                      icon: Icons.near_me_outlined,
+                      title: "Nearby Jeepney Alerts",
+                      value: _nearbyAlertsEnabled,
+                      onChanged: (v) => setState(() => _nearbyAlertsEnabled = v),
+                    ),
+                    _divider(),
+                    _toggleTile(
+                      icon: Icons.warning_amber_rounded,
+                      title: "Crowd Capacity Alerts",
+                      value: _crowdAlertEnabled,
+                      onChanged: (v) => setState(() => _crowdAlertEnabled = v),
+                    ),
+                    _divider(),
+                    _toggleTile(
+                      icon: Icons.map_outlined,
+                      title: "Dark Map Interface",
+                      value: _darkMapEnabled,
+                      onChanged: (v) => setState(() => _darkMapEnabled = v),
+                    ),
+                  ]).animate(delay: 500.ms).fadeIn(duration: 500.ms).slideY(begin: 0.1, curve: Curves.easeOutCubic),
+
+                  const SizedBox(height: 24),
+                  _sectionHeader("General").animate(delay: 600.ms).fadeIn(),
+                  const SizedBox(height: 12),
+                  _settingsCard([
+                    _actionTile(
+                      icon: Icons.info_outline,
+                      title: "App Version",
+                      trailingText: "v1.0.0",
+                    ),
+                    _divider(),
+                    _actionTile(
+                      icon: Icons.logout_rounded,
+                      title: "Sign Out",
+                      iconColor: Colors.red,
+                      titleColor: Colors.red,
+                      onTap: () => _confirmLogout(context),
+                    ),
+                  ]).animate(delay: 700.ms).fadeIn(duration: 500.ms).slideY(begin: 0.1, curve: Curves.easeOutCubic),
+                ],
               ),
-            ],
+            ),
           ),
 
           // ── Loading overlay ──────────────────────────────────────────────────
@@ -231,13 +225,16 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
   }
 
   Widget _sectionHeader(String label) {
-    return Text(
-      label.toUpperCase(),
-      style: const TextStyle(
-        fontSize: 11,
-        fontWeight: FontWeight.w700,
-        color: Color(0xFF2D6A1E),
-        letterSpacing: 1.1,
+    return Padding(
+      padding: const EdgeInsets.only(left: 4),
+      child: Text(
+        label.toUpperCase(),
+        style: TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w800,
+          color: Colors.grey[500],
+          letterSpacing: 1.2,
+        ),
       ),
     );
   }
@@ -246,12 +243,13 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     return Container(
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: Colors.black.withOpacity(0.04), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.02),
+            blurRadius: 15,
+            offset: const Offset(0, 8),
           ),
         ],
       ),
@@ -261,38 +259,31 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
 
   Widget _toggleTile({
     required IconData icon,
-    required Color iconColor,
     required String title,
-    required String subtitle,
     required bool value,
     required ValueChanged<bool> onChanged,
   }) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(9),
+            padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: iconColor.withOpacity(0.1),
+              color: const Color(0xFFF3FBF5),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: iconColor, size: 20),
+            child: Icon(icon, color: const Color(0xFF2D6A1E), size: 20),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 16),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(title,
-                    style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                        color: Color(0xFF1A1A1A))),
-                const SizedBox(height: 2),
-                Text(subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500])),
-              ],
+            child: Text(
+              title,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+                color: Color(0xFF111827),
+              ),
             ),
           ),
           Switch.adaptive(
@@ -307,40 +298,48 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
 
   Widget _actionTile({
     required IconData icon,
-    required Color iconColor,
     required String title,
+    Color? iconColor,
     Color? titleColor,
-    Widget? trailing,
+    String? trailingText,
     VoidCallback? onTap,
   }) {
+    final effectiveIconColor = iconColor ?? const Color(0xFF2D6A1E);
+    final bgColor = iconColor != null ? iconColor.withOpacity(0.1) : const Color(0xFFF3FBF5);
+    
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
+      borderRadius: BorderRadius.circular(24),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(9),
+              padding: const EdgeInsets.all(10),
               decoration: BoxDecoration(
-                color: iconColor.withOpacity(0.1),
+                color: bgColor,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: Icon(icon, color: iconColor, size: 20),
+              child: Icon(icon, color: effectiveIconColor, size: 20),
             ),
-            const SizedBox(width: 14),
+            const SizedBox(width: 16),
             Expanded(
               child: Text(
                 title,
                 style: TextStyle(
                   fontWeight: FontWeight.w600,
-                  fontSize: 14,
-                  color: titleColor ?? const Color(0xFF1A1A1A),
+                  fontSize: 15,
+                  color: titleColor ?? const Color(0xFF111827),
                 ),
               ),
             ),
-            trailing ??
-                const Icon(Icons.chevron_right, color: Colors.grey, size: 20),
+            if (trailingText != null)
+              Text(
+                trailingText,
+                style: TextStyle(color: Colors.grey[400], fontSize: 13, fontWeight: FontWeight.w600),
+              )
+            else
+              const Icon(Icons.chevron_right_rounded, color: Colors.grey, size: 22),
           ],
         ),
       ),
@@ -351,9 +350,9 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     return Divider(
       height: 1,
       thickness: 1,
-      indent: 58,
-      endIndent: 18,
-      color: Colors.grey.shade100,
+      indent: 64,
+      endIndent: 20,
+      color: Colors.black.withOpacity(0.05),
     );
   }
 
@@ -361,60 +360,59 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
     showDialog(
       context: context,
       builder: (dialogCtx) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        backgroundColor: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.all(24),
+          padding: const EdgeInsets.fromLTRB(24, 32, 24, 24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.red.withOpacity(0.1),
+                  color: Colors.red.shade50,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.logout_rounded,
-                    color: Colors.redAccent, size: 32),
-              ),
-              const SizedBox(height: 16),
-              const Text("Sign Out",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A1A))),
-              const SizedBox(height: 8),
-              Text(
-                "Are you sure you want to sign out?",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                child: const Icon(Icons.logout_rounded, color: Colors.redAccent, size: 36),
               ),
               const SizedBox(height: 24),
+              const Text(
+                "Sign Out",
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w900,
+                  color: Color(0xFF111827),
+                  letterSpacing: -0.5,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                "Are you sure you want to securely wrap up and sign out from your account?",
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600], height: 1.4),
+              ),
+              const SizedBox(height: 32),
               Row(
                 children: [
                   Expanded(
                     child: TextButton(
                       onPressed: () => Navigator.pop(dialogCtx),
                       style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
                       child: Text("Cancel",
-                          style: TextStyle(
-                              color: Colors.grey[600],
-                              fontWeight: FontWeight.w600)),
+                          style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                      Navigator.pop(dialogCtx);
+                        Navigator.pop(dialogCtx);
                         if (mounted) setState(() => _isLoading = true);
                         try {
-                          await _authService
-                              .signOut()
-                              .timeout(const Duration(seconds: 5));
+                          await _authService.signOut().timeout(const Duration(seconds: 5));
                         } catch (_) {}
                         if (mounted) setState(() => _isLoading = false);
                         if (context.mounted) {
@@ -428,12 +426,10 @@ class _UserSettingsScreenState extends State<UserSettingsScreen> {
                         backgroundColor: Colors.redAccent,
                         foregroundColor: Colors.white,
                         elevation: 0,
-                        padding: const EdgeInsets.symmetric(vertical: 13),
-                        shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(14)),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: const Text("Sign Out",
-                          style: TextStyle(fontWeight: FontWeight.bold)),
+                      child: const Text("Sign Out", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                 ],

@@ -20,6 +20,20 @@ class _SignupScreenState extends State<SignupScreen> {
   bool _obscureConfirmPassword = true;
   String? _errorMessage;
 
+  String _getFriendlyErrorMessage(String error) {
+    if (error.contains('email-already-in-use')) {
+      return "An account already exists for this email address.";
+    } else if (error.contains('invalid-email')) {
+      return "Please enter a valid email address.";
+    } else if (error.contains('weak-password')) {
+      return "Your password is too weak. Please use a stronger one.";
+    } else if (error.contains('network-request-failed')) {
+      return "Network error. Please check your internet connection.";
+    }
+    // Fallback: strip ugly firebase codes
+    return error.replaceAll(RegExp(r'\[.*?\]\s*'), '').replaceFirst("Exception: ", "").trim();
+  }
+
   Future<void> _handleSignup() async {
     final name = _nameController.text.trim();
     final email = _emailController.text.trim();
@@ -49,7 +63,14 @@ class _SignupScreenState extends State<SignupScreen> {
         Navigator.pop(context);
       }
     } catch (e) {
-      if (mounted) setState(() => _errorMessage = e.toString().replaceFirst("Exception: ", ""));
+      if (mounted) {
+        final errorStr = e.toString();
+        if (errorStr.contains('popup-closed-by-user') || errorStr.contains('cancelled')) {
+          setState(() => _errorMessage = null);
+        } else {
+          setState(() => _errorMessage = _getFriendlyErrorMessage(errorStr));
+        }
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
