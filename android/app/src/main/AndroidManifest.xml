@@ -1,14 +1,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <application
-        android:label="ParaGo"
-        android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
-
     <!-- Permissions -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <application
+        android:label="ParaGo"
+        android:name="${applicationName}"
+        android:icon="@mipmap/ic_launcher">
 
     <activity
             android:name=".MainActivity"

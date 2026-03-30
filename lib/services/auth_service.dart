@@ -15,8 +15,9 @@ class AuthService {
   // Get current user profile from DB
   Future<UserProfile?> getUserProfile(String uid) async {
     try {
-      // First try direct UID lookup
-      final snapshot = await _db.ref().child('users').child(uid).get();
+      // First try direct UID lookup (with timeout to avoid infinite hang)
+      final snapshot = await _db.ref().child('users').child(uid).get()
+          .timeout(const Duration(seconds: 10));
       if (snapshot.exists && snapshot.value != null) {
         final data = snapshot.value as Map<dynamic, dynamic>;
         return UserProfile.fromMap(data, uid);
@@ -26,7 +27,8 @@ class AuthService {
       final currentUser = _auth.currentUser;
       if (currentUser?.email != null) {
         final searchEmail = currentUser!.email!.toLowerCase();
-        final allUsersSnapshot = await _db.ref().child('users').get();
+        final allUsersSnapshot = await _db.ref().child('users').get()
+            .timeout(const Duration(seconds: 10));
         if (allUsersSnapshot.exists && allUsersSnapshot.value != null) {
           final allUsers = allUsersSnapshot.value as Map<dynamic, dynamic>;
           print("[AuthService] Fallback search: total users in DB = ${allUsers.length}");
