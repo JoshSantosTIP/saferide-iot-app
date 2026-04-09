@@ -52,9 +52,7 @@ class AuthService {
     } catch (e) {
       print("[AuthService] Exception in getUserProfile: $e");
     }
-    print("[AuthService] getUserProfile: Returning default profile for UID: $uid");
-    // Final fallback to avoid "Passenger" if user wants "Unknown"
-    return UserProfile(uid: uid, email: _auth.currentUser?.email ?? '', name: 'Unknown User', role: 'user');
+    return null;
   }
 
   // Create a default user profile if none exists

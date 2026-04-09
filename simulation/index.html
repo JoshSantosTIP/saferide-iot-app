@@ -7,38 +7,53 @@
     <title>ParaGo - Premium Admin</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        /* Using Plus Jakarta Sans for maximum readability */
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
-
         :root {
-            /* Vibrant but light gradients */
-            --bg-gradient: linear-gradient(135deg, #f6f8fd 0%, #f1f5f9 100%);
-            --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-            --sidebar-gradient: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-            --card-gradient: linear-gradient(145deg, #ffffff 0%, #fbfcfe 100%);
-
-            /* Status Gradients */
-            --success-gradient: linear-gradient(135deg, #10b981 0%, #34d399 100%);
-            --danger-gradient: linear-gradient(135deg, #ef4444 0%, #f87171 100%);
-            --warning-gradient: linear-gradient(135deg, #f59e0b 0%, #fbbf24 100%);
-
-            /* Solid Colors */
-            --text-main: #1e293b;
-            --text-muted: #64748b;
-            --border: rgba(226, 232, 240, 0.8);
-            --sidebar-width: 260px;
-
-            /* Soft Shadows */
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.025);
+            /* Premium Botanical Modernism */
+            --bg-main: #F4FAF2;
+            --bg-sidebar: #0F1F0D;
+            --bg-surface: #FFFFFF;
+            
+            /* Accents */
+            --accent-green: #2D6A1E;
+            --accent-green-light: #4BA028;
+            --accent-mint: #DFF0D8;
+            --accent-mint-glow: rgba(45, 106, 30, 0.15);
+            
+            /* Text Colors */
+            --text-primary: #1A202C;
+            --text-secondary: #4A5568;
+            --text-muted: #718096;
+            --text-inverse: #FFFFFF;
+            
+            /* Status Colors */
+            --color-success: #38A169;
+            --color-danger: #E53E3E;
+            --color-warning: #DD6B20;
+            
+            /* Borders & Shadows */
+            --border-glass: rgba(0, 0, 0, 0.05); /* Soft structural lines */
+            --border-subtle: #E2E8F0;
+            --shadow-soft: 0 10px 40px rgba(45, 106, 30, 0.06);
+            --shadow-float: 0 20px 50px rgba(0, 0, 0, 0.08);
+            --sidebar-width: 280px;
+            
+            /* Gradients */
+            --grad-sidebar: linear-gradient(180deg, #0F1F0D 0%, #173312 100%);
+            --grad-accent: linear-gradient(135deg, #4BA028 0%, #2D6A1E 100%);
+            --danger-gradient: linear-gradient(135deg, #FC8181 0%, #E53E3E 100%);
+            --warning-gradient: linear-gradient(135deg, #FBD38D 0%, #DD6B20 100%);
+            --success-gradient: linear-gradient(135deg, #68D391 0%, #38A169 100%);
         }
 
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
-            background: var(--bg-gradient);
-            color: var(--text-main);
+            background: var(--bg-main);
+            color: var(--text-primary);
             margin: 0;
             display: flex;
             height: 100vh;
@@ -46,37 +61,41 @@
             -webkit-font-smoothing: antialiased;
         }
 
+        h1, h2, h3, .brand, .value-display, .value {
+            font-family: 'Outfit', sans-serif;
+        }
+
         /* Sidebar */
         .sidebar {
             width: var(--sidebar-width);
-            background: var(--sidebar-gradient);
-            border-right: 1px solid var(--border);
+            background: var(--bg-sidebar);
             display: flex;
             flex-direction: column;
-            box-shadow: var(--shadow-sm);
             z-index: 10;
+            background-image: var(--grad-sidebar);
+            transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            color: var(--text-inverse);
+            box-shadow: 4px 0 24px rgba(0, 0, 0, 0.1);
         }
 
         .brand {
-            padding: 32px 24px;
-            font-size: 1.4rem;
-            font-weight: 700;
-            background: var(--primary-gradient);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            padding: 40px 24px;
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--text-inverse);
             display: flex;
             align-items: center;
             gap: 12px;
             letter-spacing: -0.01em;
+            text-transform: uppercase;
         }
 
         .brand-indicator {
-            width: 14px;
-            height: 14px;
-            background: var(--primary-gradient);
+            width: 16px;
+            height: 16px;
+            background: var(--grad-accent);
             border-radius: 4px;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+            box-shadow: 0 0 15px var(--accent-mint-glow);
         }
 
         .nav-menu {
@@ -87,27 +106,30 @@
         }
 
         .nav-link {
-            padding: 12px 20px;
-            color: var(--text-muted);
+            padding: 14px 20px;
+            color: rgba(255, 255, 255, 0.65);
             text-decoration: none;
             border-radius: 12px;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            position: relative;
+            transition: all 0.3s ease;
+            margin: 0 12px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
         .nav-link:hover {
-            color: var(--text-main);
-            background: rgba(255, 255, 255, 0.7);
+            color: #FFFFFF;
+            background: rgba(255, 255, 255, 0.05);
             transform: translateX(4px);
         }
 
         .nav-link.active {
-            background: var(--primary-gradient);
-            color: white;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
-            font-weight: 600;
+            background: var(--accent-green);
+            color: #FFFFFF;
+            font-weight: 700;
+            box-shadow: 0 8px 20px rgba(45, 106, 30, 0.4);
         }
 
         /* Main Content */
@@ -118,10 +140,10 @@
         }
 
         .topbar {
-            height: 76px;
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(12px);
-            border-bottom: 1px solid var(--border);
+            height: 80px;
+            background: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border-subtle);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -130,35 +152,36 @@
         }
 
         .page-title {
-            font-size: 1.35rem;
-            font-weight: 600;
+            font-size: 1.45rem;
+            font-weight: 700;
             margin: 0;
-            letter-spacing: -0.02em;
+            color: var(--text-primary);
         }
 
         .user-profile {
             display: flex;
             align-items: center;
             gap: 12px;
-            font-weight: 500;
+            font-weight: 600;
             padding: 6px 16px 6px 6px;
-            background: white;
+            background: var(--bg-main);
             border-radius: 30px;
-            box-shadow: var(--shadow-sm);
-            border: 1px solid var(--border);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-primary);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
         }
 
         .avatar {
-            width: 34px;
-            height: 34px;
+            width: 36px;
+            height: 36px;
             border-radius: 50%;
-            background: var(--primary-gradient);
-            color: white;
+            background: var(--accent-mint);
+            color: var(--accent-green);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 0.9rem;
-            font-weight: 600;
+            font-size: 1rem;
+            font-weight: 800;
         }
 
         .content-scroll {
@@ -191,19 +214,21 @@
 
         /* Cards & Layout */
         .card {
-            background: var(--card-gradient);
-            border: 1px solid rgba(255, 255, 255, 0.8);
-            border-radius: 20px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-subtle);
+            border-radius: 24px;
             padding: 32px;
-            box-shadow: var(--shadow-md), inset 0 1px 0 rgba(255, 255, 255, 1);
             margin-bottom: 32px;
             position: relative;
             overflow: hidden;
-            transition: box-shadow 0.3s ease;
+            transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
         }
 
         .card:hover {
-            box-shadow: var(--shadow-lg), inset 0 1px 0 rgba(255, 255, 255, 1);
+            border-color: var(--accent-green-light);
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-float);
         }
 
         /* Subtle top border for visual weight instead of full borders */
@@ -213,21 +238,21 @@
             top: 0;
             left: 0;
             right: 0;
-            height: 3px;
-            background: var(--border);
-            opacity: 0.5;
+            height: 4px;
+            background: var(--grad-accent);
+            opacity: 0;
+            transition: opacity 0.3s;
         }
 
-        .card.card-primary::before {
-            background: var(--primary-gradient);
+        .card:hover::before {
             opacity: 1;
         }
 
         .card-title {
-            font-size: 1.2rem;
-            font-weight: 600;
+            font-size: 1.25rem;
+            font-weight: 700;
             margin: 0 0 24px 0;
-            color: var(--text-main);
+            color: var(--text-primary);
             letter-spacing: -0.01em;
         }
 
@@ -267,18 +292,18 @@
         }
 
         .icon-blue {
-            background: var(--primary-gradient);
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+            background: var(--accent-mint);
+            color: var(--accent-green);
         }
 
         .icon-green {
-            background: var(--success-gradient);
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+            background: rgba(56, 161, 105, 0.1);
+            color: var(--color-success);
         }
 
         .icon-red {
-            background: var(--danger-gradient);
-            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
+            background: rgba(229, 62, 62, 0.1);
+            color: var(--color-danger);
         }
 
         .stat-info h3 {
@@ -295,7 +320,8 @@
             font-size: 2.25rem;
             font-weight: 700;
             letter-spacing: -0.02em;
-            color: var(--text-main);
+            color: var(--text-primary);
+            font-family: 'Space Grotesk', sans-serif;
         }
 
         /* Forms */
@@ -314,23 +340,24 @@
         input,
         select {
             width: 100%;
-            padding: 12px 16px;
-            border: 1px solid var(--border);
+            padding: 14px 18px;
+            border: 1px solid var(--border-subtle);
             border-radius: 12px;
             font-size: 1rem;
             font-family: inherit;
-            background: rgba(255, 255, 255, 0.6);
+            background: #FFFFFF;
+            color: var(--text-primary);
             box-sizing: border-box;
             transition: all 0.3s ease;
-            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.02);
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
         }
 
         input:focus,
         select:focus {
             outline: none;
-            border-color: #6366f1;
-            background: #ffffff;
-            box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.1);
+            border-color: var(--accent-green);
+            background: #FFFFFF;
+            box-shadow: 0 0 0 4px var(--accent-mint-glow);
         }
 
         /* Buttons */
@@ -346,15 +373,17 @@
         }
 
         .btn-primary {
-            background: var(--primary-gradient);
+            background: var(--grad-accent);
             color: white;
             width: 100%;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.25);
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(45, 106, 30, 0.25);
         }
 
         .btn-primary:hover {
             transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.35);
+            box-shadow: 0 8px 25px rgba(45, 106, 30, 0.35);
+            filter: brightness(1.1);
         }
 
         .btn-primary:active {
@@ -363,15 +392,15 @@
 
         .btn-outline {
             background: white;
-            border: 1px solid rgba(226, 232, 240, 1);
-            color: var(--text-main);
-            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            font-weight: 600;
         }
 
         .btn-outline:hover {
-            border-color: #6366f1;
-            color: #4f46e5;
-            background: #f8fafc;
+            border-color: var(--accent-green);
+            color: var(--accent-green);
+            background: var(--accent-mint);
         }
 
         .btn-danger {
@@ -419,16 +448,13 @@
         }
 
         tbody tr {
-            background: white;
-            box-shadow: var(--shadow-sm);
-            border-radius: 12px;
-            transition: transform 0.2s, box-shadow 0.2s;
-            border: 1px solid rgba(255, 255, 255, 0.8);
+            background: transparent;
+            transition: all 0.3s ease;
         }
 
         tbody tr:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-md);
+            background: rgba(45, 106, 30, 0.04);
+            transform: scale(1.005);
         }
 
         td:first-child {
@@ -452,7 +478,9 @@
         }
 
         .badge-success {
-            background: var(--success-gradient);
+            background: rgba(16, 185, 129, 0.1);
+            color: #10b981;
+            border: 1px solid rgba(16, 185, 129, 0.2);
         }
 
         .badge-danger {
@@ -461,7 +489,8 @@
         }
 
         .badge-passenger {
-            background: linear-gradient(135deg, #94a3b8 0%, #64748b 100%);
+            background: #E2E8F0;
+            color: #4A5568;
         }
 
         .badge-operator {
@@ -491,7 +520,7 @@
             font-size: 3rem;
             font-weight: 700;
             margin: 8px 0;
-            color: var(--text-main);
+            color: var(--text-primary);
             line-height: 1.1;
         }
 
@@ -523,18 +552,18 @@
         }
 
         .sim-panel-box {
-            background: rgba(255, 255, 255, 0.7);
+            background: #FFFFFF;
             padding: 24px;
             border-radius: 16px;
-            border: 1px solid var(--border);
-            box-shadow: inset 0 2px 4px rgba(255, 255, 255, 0.8);
+            border: 1px solid var(--border-subtle);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.02);
         }
 
         /* Modal */
         .modal-overlay {
             position: fixed;
             inset: 0;
-            background: rgba(15, 23, 42, 0.4);
+            background: rgba(15, 31, 13, 0.4);
             backdrop-filter: blur(4px);
             display: none;
             justify-content: center;
@@ -543,12 +572,12 @@
         }
 
         .modal {
-            background: white;
+            background: #FFFFFF;
             padding: 40px;
             border-radius: 20px;
             width: 100%;
             max-width: 440px;
-            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+            box-shadow: var(--shadow-float);
             animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
@@ -570,39 +599,126 @@
             display: block;
         }
 
-        .msg.error {
-            background: var(--danger-gradient);
-            display: block;
+        /* Auth specific */
+        .login-view {
+            position: fixed;
+            inset: 0;
+            background: var(--bg-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(75, 160, 40, 0.1) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(45, 106, 30, 0.1) 0%, transparent 40%);
         }
+
+        .login-card {
+            width: 100%;
+            max-width: 420px;
+            text-align: center;
+            padding: 48px;
+            background: #FFFFFF;
+            border: 1px solid var(--border-subtle);
+            border-radius: 32px;
+            box-shadow: var(--shadow-float);
+        }
+
+        .login-logo {
+            width: 64px;
+            height: 64px;
+            background: var(--grad-accent);
+            border-radius: 16px;
+            margin: 0 auto 32px;
+            box-shadow: 0 0 30px var(--accent-mint-glow);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            color: #FFFFFF;
+            font-weight: 800;
+        }
+
+        .dashboard-container {
+            display: flex;
+            width: 100%;
+            height: 100vh;
+        }
+
+        .hidden { display: none !important; }
+
+        .loader {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border-subtle);
+            border-top: 4px solid var(--accent-green);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin { 100% { transform: rotate(360deg); } }
     </style>
 </head>
 
 <body>
-    <!-- SIDEBAR -->
-    <aside class="sidebar">
-        <div class="brand">
-            <div class="brand-indicator"></div>
-            ParaGo
-        </div>
-        <nav class="nav-menu">
-            <a class="nav-link active" data-target="view-overview">Overview</a>
-            <a class="nav-link" data-target="view-sim">Simulation Panel</a>
-            <a class="nav-link" data-target="view-fleet">Jeepney Fleet</a>
-            <a class="nav-link" data-target="view-users">Users</a>
-        </nav>
-    </aside>
-
-    <!-- CONTENT -->
-    <main class="main-content">
-        <header class="topbar">
-            <h1 class="page-title" id="page-title">Overview</h1>
-            <div class="user-profile">
-                <div class="avatar">A</div>
-                Admin Access
+    <!-- LOGIN VIEW -->
+    <div id="login-view" class="login-view">
+        <div class="login-card">
+            <div class="login-logo">P</div>
+            <h2 style="margin-bottom: 8px; font-size: 1.75rem;">ParaGo Admin</h2>
+            <p style="color: var(--text-secondary); margin-bottom: 32px; font-size: 0.95rem;">Secure Simulation Portal</p>
+            
+            <div id="login-loader" class="hidden">
+                <div class="loader"></div>
+                <p style="font-size: 0.85rem; color: var(--accent-cyan);">Verifying Credentials...</p>
             </div>
-        </header>
 
-        <div class="content-scroll">
+            <form id="login-form">
+                <div class="form-group" style="text-align: left;">
+                    <label>Email Address</label>
+                    <input type="email" id="login-email" placeholder="admin@parago.com" required>
+                </div>
+                <div class="form-group" style="text-align: left; margin-bottom: 32px;">
+                    <label>Password</label>
+                    <input type="password" id="login-password" placeholder="••••••••" required>
+                </div>
+                <button type="submit" class="btn-primary">Sign In to Dashboard</button>
+                <div id="login-error" class="msg error" style="margin-top: 20px;"></div>
+            </form>
+        </div>
+    </div>
+
+    <!-- DASHBOARD CONTAINER -->
+    <div id="dashboard-container" class="dashboard-container hidden">
+        <!-- SIDEBAR -->
+        <aside class="sidebar">
+            <div class="brand">
+                <div class="brand-indicator"></div>
+                ParaGo
+            </div>
+            <nav class="nav-menu">
+                <a class="nav-link active" data-target="view-overview">Overview</a>
+                <a class="nav-link" data-target="view-sim">Simulation Panel</a>
+                <a class="nav-link" data-target="view-fleet">Jeepney Fleet</a>
+                <a class="nav-link" data-target="view-users">Users</a>
+            </nav>
+            <div style="margin-top: auto; padding: 20px;">
+                <button class="btn-outline btn-small" style="width: 100%; border-color: var(--border-glass);" onclick="handleLogout()">Sign Out</button>
+            </div>
+        </aside>
+
+        <!-- CONTENT -->
+        <main class="main-content">
+            <header class="topbar">
+                <h1 class="page-title" id="page-title">Overview</h1>
+                <div class="user-profile">
+                    <div class="avatar" id="user-avatar">A</div>
+                    <span id="user-display-name">Admin Access</span>
+                </div>
+            </header>
+
+            <div class="content-scroll">
 
             <!-- OVERVIEW -->
             <section id="view-overview" class="view active">
@@ -626,6 +742,22 @@
                         <div class="stat-info">
                             <h3>Live Overloads</h3>
                             <div class="value" id="stat-alerts">0</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ANALYTICS SECTION -->
+                <div class="grid-2" style="margin-bottom: 32px;">
+                    <div class="card" style="margin-bottom: 0;">
+                        <h2 class="card-title">Live Fleet Passenger Load</h2>
+                        <div style="height: 250px; position: relative;">
+                            <canvas id="loadChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="card" style="margin-bottom: 0;">
+                        <h2 class="card-title">Fleet State Distribution</h2>
+                        <div style="height: 250px; position: relative; display: flex; justify-content: center;">
+                            <canvas id="stateChart"></canvas>
                         </div>
                     </div>
                 </div>
@@ -682,8 +814,10 @@
                             <label>Passengers</label>
                             <div class="value-display" id="sim-pax">0</div>
                             <div class="sim-actions">
+                                <button class="btn-outline" onclick="changeP(-3)">-3</button>
                                 <button class="btn-outline" onclick="changeP(-1)">-1</button>
                                 <button class="btn-outline" onclick="changeP(1)">+1</button>
+                                <button class="btn-outline" onclick="changeP(3)">+3</button>
                             </div>
                         </div>
                     </div>
@@ -896,7 +1030,77 @@
     <script src="config.js"></script>
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-app.js";
-        import { getDatabase, ref, set, onValue, update, remove, off } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+        import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-auth.js";
+        import { getDatabase, ref, set, onValue, update, remove, off, get, push } from "https://www.gstatic.com/firebasejs/10.9.0/firebase-database.js";
+
+        // Firebase Setup
+        const app = initializeApp(window.firebaseConfigValues || firebaseConfigValues);
+        const db = getDatabase(app);
+        const auth = getAuth(app);
+
+        // Auth Logic
+        const loginView = document.getElementById('login-view');
+        const dashContainer = document.getElementById('dashboard-container');
+        const loginForm = document.getElementById('login-form');
+        const loginLoader = document.getElementById('login-loader');
+        const loginError = document.getElementById('login-error');
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // Check if admin
+                const userSnapshot = await get(ref(db, `users/${user.uid}`));
+                const userData = userSnapshot.val();
+
+                if (userData && userData.role === 'admin') {
+                    showDashboard(user, userData);
+                } else {
+                    handleLogout('Access Denied: Admin privileges required.');
+                }
+            } else {
+                showLogin();
+            }
+        });
+
+        function showLogin() {
+            loginView.classList.remove('hidden');
+            dashContainer.classList.add('hidden');
+            loginLoader.classList.add('hidden');
+            loginForm.classList.remove('hidden');
+        }
+
+        function showDashboard(user, data) {
+            loginView.classList.add('hidden');
+            dashContainer.classList.remove('hidden');
+            document.getElementById('user-display-name').innerText = data.name || data.fullName || 'Administrator';
+            document.getElementById('user-avatar').innerText = (data.name || 'A').charAt(0).toUpperCase();
+        }
+
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-email').value;
+            const pass = document.getElementById('login-password').value;
+
+            loginForm.classList.add('hidden');
+            loginLoader.classList.remove('hidden');
+            loginError.style.display = 'none';
+
+            try {
+                await signInWithEmailAndPassword(auth, email, pass);
+            } catch (error) {
+                loginForm.classList.remove('hidden');
+                loginLoader.classList.add('hidden');
+                loginError.innerText = 'Invalid email or password.';
+                loginError.style.display = 'block';
+            }
+        });
+
+        window.handleLogout = async (msg = null) => {
+            await signOut(auth);
+            if (msg) {
+                loginError.innerText = msg;
+                loginError.style.display = 'block';
+            }
+        };
 
         // Router
         const navs = document.querySelectorAll('.nav-link');
@@ -930,13 +1134,16 @@
             }
         }
 
-        // Firebase Setup
-        const app = initializeApp(window.firebaseConfigValues || firebaseConfigValues);
-        const db = getDatabase(app);
+        // Firebase Setup (Already handled above)
 
         let jeeps = {}; let users = {};
         let sId = null; let sData = null; let sLis = null;
         let routeWaypoints = []; // Array of {lat, lng}
+        
+        // Analytics State
+        let loadChartInstance = null;
+        let stateChartInstance = null;
+        let loadHistory = { labels: [], data: [] };
 
         // Fetch route waypoints for positioning jeeps
         onValue(ref(db, 'routes'), s => {
@@ -1018,7 +1225,7 @@
                             <div style="font-weight:600; font-size:1.05rem;">${j.name || 'Unnamed Jeepney'}</div>
                             <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">${j.plate_number || 'No Plate'} • ID: ${k}</div>
                         </td>
-                        <td><strong style="color:${opName === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)'}; font-weight:500;">${opName}</strong></td>
+                        <td><strong style="color:${opName === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-primary)'}; font-weight:500;">${opName}</strong></td>
                         <td>${j.route || '-'}</td>
                         <td><span class="badge ${bad ? 'badge-danger' : 'badge-success'}">${bad ? 'OVERLOADED' : 'OK'}</span></td>
                         <td><span style="font-weight:${p > mp ? '700' : '500'}; color:${p > mp ? '#ef4444' : 'inherit'};">${p}</span> / ${mp}</td>
@@ -1040,7 +1247,7 @@
                         <div style="font-weight:600; font-size:1.05rem;">${j.name || 'Unnamed Jeepney'}</div>
                         <div style="font-size:0.8rem; color:var(--text-muted); margin-top:4px;">${j.plate_number || 'No Plate'} • ID: ${k}</div>
                     </td>
-                    <td><strong style="color:${opName === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-main)'}; font-weight:500;">${opName}</strong></td>
+                    <td><strong style="color:${opName === 'Unassigned' ? 'var(--text-muted)' : 'var(--text-primary)'}; font-weight:500;">${opName}</strong></td>
                     <td>${j.route || '-'}</td>
                     <td style="color:var(--text-muted); font-size:0.9rem;">${j.max_seat_capacity || 20} Seats | ${j.max_weight_capacity || 1000}kg</td>
                     <td style="text-align:right;">
@@ -1068,6 +1275,73 @@
 
             // Users Table
             renderUsers();
+            
+            // Analytics
+            updateCharts();
+        }
+
+        function updateCharts() {
+            const timeStr = new Date().toLocaleTimeString('en-US', {hour: '2-digit', minute:'2-digit', second:'2-digit'});
+            let activeJeeps = 0; let overloaded = 0; let totalPassengers = 0;
+            Object.values(jeeps).forEach(j => {
+                totalPassengers += (j.passenger_count || 0);
+                const w = j.current_weight || 0, mw = j.max_weight_capacity || 1000;
+                const p = j.passenger_count || 0, mp = j.max_seat_capacity || 20;
+                if (w > mw || p > mp || j.is_overloaded) { overloaded++; }
+                else if (j.status !== 'Maintenance') { activeJeeps++; }
+            });
+            const maintenance = Object.keys(jeeps).length - activeJeeps - overloaded;
+
+            // Load Line Chart
+            loadHistory.labels.push(timeStr);
+            loadHistory.data.push(totalPassengers);
+            if(loadHistory.labels.length > 25) {
+                loadHistory.labels.shift(); loadHistory.data.shift();
+            }
+
+            if(!loadChartInstance && document.getElementById('loadChart')) {
+                const ctx = document.getElementById('loadChart').getContext('2d');
+                loadChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: loadHistory.labels,
+                        datasets: [{
+                            label: 'Total Passengers',
+                            data: loadHistory.data,
+                            borderColor: '#2D6A1E',
+                            backgroundColor: 'rgba(45, 106, 30, 0.1)',
+                            borderWidth: 3,
+                            fill: true,
+                            tension: 0.4,
+                            pointRadius: 0
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, grid: { color: 'rgba(0,0,0,0.05)' } }, x: { display: false } } }
+                });
+            } else if (loadChartInstance) {
+                loadChartInstance.update();
+            }
+
+            // State Doughnut Chart
+            if(!stateChartInstance && document.getElementById('stateChart')) {
+                const ctx2 = document.getElementById('stateChart').getContext('2d');
+                stateChartInstance = new Chart(ctx2, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Active', 'Capacity Issue', 'Idle'],
+                        datasets: [{
+                            data: [activeJeeps, overloaded, maintenance],
+                            backgroundColor: ['#38A169', '#E53E3E', '#CBD5E0'],
+                            borderWidth: 0,
+                            hoverOffset: 4
+                        }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, cutout: '75%', plugins: { legend: { position: 'bottom', labels: { usePointStyle: true, boxWidth: 6, padding: 20 } } } }
+                });
+            } else if (stateChartInstance) {
+                stateChartInstance.data.datasets[0].data = [activeJeeps, overloaded, maintenance];
+                stateChartInstance.update();
+            }
         }
 
         // Sim Panel
@@ -1129,7 +1403,67 @@
         }
 
         window.changeW = (d) => { if (sData) update(ref(db, `jeepneys/${sId}`), { current_weight: Math.max(0, (sData.current_weight || 0) + d), last_updated: Date.now() }) };
-        window.changeP = (d) => { if (sData) update(ref(db, `jeepneys/${sId}`), { passenger_count: Math.max(0, (sData.passenger_count || 0) + d), last_updated: Date.now() }) };
+        
+        let pendingPaxDelta = 0;
+        let paxLogTimer = null;
+        
+        window.changeP = async (d) => { 
+            if (sData) {
+                const currentPax = sData.passenger_count || 0;
+                const newPax = Math.max(0, currentPax + d);
+                if (newPax !== currentPax) {
+                    const delta = newPax - currentPax;
+                    
+                    // 1. Update the live gauge immediately
+                    await update(ref(db, `jeepneys/${sId}`), { passenger_count: newPax, last_updated: Date.now() });
+                    
+                    // 2. Accumulate delta for bundling
+                    pendingPaxDelta += delta;
+                    
+                    clearTimeout(paxLogTimer);
+                    paxLogTimer = setTimeout(async () => {
+                        if (pendingPaxDelta === 0) return;
+                        
+                        const finalDelta = pendingPaxDelta;
+                        pendingPaxDelta = 0;
+                        
+                        // Grab latest coordinates
+                        const lat = sData.latitude || 14.7338;
+                        const lng = sData.longitude || 121.1249;
+                        let finalLocName = document.getElementById('sim-gps').innerText;
+                        
+                        // If it is displaying raw coordinates or waiting, fetch the real address string
+                        if (finalLocName.includes('.') && finalLocName.includes(',') || finalLocName.includes('Waiting')) {
+                            try {
+                                const r = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lng}&format=json&addressdetails=1`, {
+                                    headers: { 'User-Agent': 'ParaGoAdmin/1.0' }
+                                });
+                                const d_resp = await r.json();
+                                const a = d_resp.address || {};
+                                const parts = [a.road || a.pedestrian || a.highway || '', a.suburb || a.neighbourhood || a.village || '', a.city || a.town || a.municipality || ''].filter(Boolean);
+                                if (parts.length) {
+                                    finalLocName = parts.join(', ');
+                                    document.getElementById('sim-gps').innerText = finalLocName;
+                                }
+                            } catch (e) { /* fallback to coords */ }
+                        }
+                        
+                        if (finalLocName.includes('Waiting')) finalLocName = 'Simulation Zone';
+                        
+                        // Push the bundled permanent hardware audit log directly to Firebase!
+                        const logRef = push(ref(db, `jeepneys/${sId}/boarding_logs`));
+                        await set(logRef, {
+                            passenger_count: sData.passenger_count, // accurate overall count
+                            delta: finalDelta,
+                            latitude: lat,
+                            longitude: lng,
+                            location_name: finalLocName,
+                            timestamp: Date.now()
+                        });
+                    }, 1500); // Wait 1.5 seconds after last click to bundle everything
+                }
+            } 
+        };
         window.move = (lat, lng) => { if (sData) update(ref(db, `jeepneys/${sId}`), { latitude: (sData.latitude || 14.73) + lat, longitude: (sData.longitude || 121.12) + lng, last_updated: Date.now() }) };
         window.resetSim = () => { if (sData) update(ref(db, `jeepneys/${sId}`), { current_weight: 0, passenger_count: 0, is_overloaded: false, last_updated: Date.now() }) };
 

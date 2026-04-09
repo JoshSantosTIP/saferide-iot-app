@@ -32,7 +32,7 @@ class UserProfile {
       'name': name,
       if (profilePictureUrl != null) 'profile_picture': profilePictureUrl,
       'role': role,
-      'assigned_jeepney': assignedJeepney,
+      if (assignedJeepney != null) 'assigned_jeepney': assignedJeepney,
     };
   }
 

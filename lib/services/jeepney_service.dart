@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
 import '../models/jeepney_data.dart';
 import '../models/user_profile.dart';
 
@@ -73,41 +75,136 @@ class JeepneyService {
     }).asBroadcastStream();
   }
 
-  // Task 2: Incoming - Check for alerts within the stream listener (side effect)
-  // Or handled in UI. Here we implement the check logic function as requested.
-  bool checkOverload(String jeepId, double weight, double maxWeight, int count, int maxCount) {
-    bool isWeightOverloaded = weight > maxWeight;
-    bool isPassengerOverloaded = count > maxCount;
-    bool isOverloaded = isWeightOverloaded || isPassengerOverloaded;
+  final Map<String, bool> _weightStates = {};
+  final Map<String, bool> _seatStates = {};
 
-    final wasOverloaded = _overloadStates[jeepId] ?? false;
+  // Task 2: Incoming - Check for alerts within the stream listener (side effect)
+  void checkSystemAlerts(JeepneyData data) {
+    bool isWeightOverloaded = data.currentWeight > data.maxWeightCapacity;
+    bool isSeatFull = data.passengerCount >= data.maxSeatCapacity;
+
+    final wasWeightOverloaded = _weightStates[data.id] ?? false;
+    final wasSeatFull = _seatStates[data.id] ?? false;
 
     // Trigger notification if state changes from False to True for THIS jeepney
-    if (isOverloaded && !wasOverloaded) {
-      if (isWeightOverloaded) {
-        _showOverloadNotification(
-          'WEIGHT LIMIT EXCEEDED',
-          'Vehicle $jeepId weight is above capacity!',
-        );
-      }
-      if (isPassengerOverloaded) {
-        _showOverloadNotification(
-          'PASSENGER LIMIT EXCEEDED',
-          'Vehicle $jeepId: Maximum passenger count reached!',
-        );
-      }
+    if (isWeightOverloaded && !wasWeightOverloaded) {
+      _showSystemAlertNotification(
+        0,
+        'WEIGHT LIMIT EXCEEDED',
+        'Vehicle ${data.id} weight is above capacity!',
+      );
+      _logSystemAlert(
+        jeepId: data.id,
+        type: 'weight_overload',
+        message: 'Weight limit exceeded (${data.currentWeight.toStringAsFixed(0)}/${data.maxWeightCapacity}kg)',
+        latitude: data.latitude,
+        longitude: data.longitude,
+      );
     }
-    _overloadStates[jeepId] = isOverloaded;
 
-    return isOverloaded;
+    if (isSeatFull && !wasSeatFull) {
+      _showSystemAlertNotification(
+        1,
+        'FULL SEATS',
+        'Vehicle ${data.id}: Maximum passenger count reached!',
+      );
+      _logSystemAlert(
+        jeepId: data.id,
+        type: 'full_seats',
+        message: 'No more seats available (${data.passengerCount}/${data.maxSeatCapacity})',
+        latitude: data.latitude,
+        longitude: data.longitude,
+      );
+    }
+
+    _weightStates[data.id] = isWeightOverloaded;
+    _seatStates[data.id] = isSeatFull;
   }
 
-  Future<void> _showOverloadNotification(String title, String body) async {
+  Future<void> _logSystemAlert({
+    required String jeepId,
+    required String type,
+    required String message,
+    required double latitude,
+    required double longitude,
+  }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final alertRef = _dbRef.child('jeepneys/$jeepId/system_alerts').push();
+    
+    // Push immediately so the UI doesn't lag waiting for HTTP reverse geocode
+    await alertRef.set({
+      'type': type,
+      'message': message,
+      'latitude': latitude,
+      'longitude': longitude,
+      'location_name': 'Locating...',
+      'timestamp': timestamp,
+    });
+    
+    // Resolve location quietly in the background
+    reverseGeocode(latitude, longitude).then((name) {
+      alertRef.update({'location_name': name});
+    });
+  }
+
+  Stream<List<Map<String, dynamic>>> streamSystemAlerts(String jeepId) {
+    return _dbRef
+        .child('jeepneys/$jeepId/system_alerts')
+        .onValue
+        .map<List<Map<String, dynamic>>>((event) {
+      final value = event.snapshot.value;
+      if (value == null) return [];
+      final map = value as Map<dynamic, dynamic>;
+      final list = <Map<String, dynamic>>[];
+      for (final entry in map.entries) {
+        final data = Map<String, dynamic>.from(entry.value as Map);
+        data['id'] = entry.key.toString();
+        list.add(data);
+      }
+      list.sort((a, b) =>
+          (b['timestamp'] as int? ?? 0).compareTo(a['timestamp'] as int? ?? 0));
+      return list;
+    });
+  }
+
+  Future<List<Map<String, dynamic>>> fetchHistoricalBoardingLogs(String jeepId) async {
+    final snapshot = await _dbRef.child('jeepneys/$jeepId/boarding_logs').get();
+    if (!snapshot.exists || snapshot.value == null) return [];
+    
+    final map = snapshot.value as Map<dynamic, dynamic>;
+    final list = <Map<String, dynamic>>[];
+    for (final entry in map.entries) {
+      final data = Map<String, dynamic>.from(entry.value as Map);
+      data['id'] = entry.key.toString();
+      list.add(data);
+    }
+    list.sort((a, b) =>
+        (b['timestamp'] as int? ?? 0).compareTo(a['timestamp'] as int? ?? 0));
+    return list;
+  }
+
+  Future<List<Map<String, dynamic>>> fetchHistoricalAlerts(String jeepId) async {
+    final snapshot = await _dbRef.child('jeepneys/$jeepId/system_alerts').get();
+    if (!snapshot.exists || snapshot.value == null) return [];
+    
+    final map = snapshot.value as Map<dynamic, dynamic>;
+    final list = <Map<String, dynamic>>[];
+    for (final entry in map.entries) {
+      final data = Map<String, dynamic>.from(entry.value as Map);
+      data['id'] = entry.key.toString();
+      list.add(data);
+    }
+    list.sort((a, b) =>
+        (b['timestamp'] as int? ?? 0).compareTo(a['timestamp'] as int? ?? 0));
+    return list;
+  }
+
+  Future<void> _showSystemAlertNotification(int id, String title, String body) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
           'parago_alerts',
           'ParaGo Alerts',
-          channelDescription: 'Notifications for vehicle overload status',
+          channelDescription: 'Notifications for vehicle alerts',
           importance: Importance.max,
           priority: Priority.high,
           ticker: 'ticker',
@@ -117,39 +214,10 @@ class JeepneyService {
       android: androidPlatformChannelSpecifics,
     );
 
-    await _notificationsPlugin.show(0, title, body, platformChannelSpecifics);
+    await _notificationsPlugin.show(id, title, body, platformChannelSpecifics);
   }
 
-  // Task 2: Service Layer - Outgoing (Location Data)
-  void startLocationUpdates(String jeepId) async {
-    // Request permissions first
-    LocationPermission permission = await Geolocator.checkPermission();
-    if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
-      if (permission == LocationPermission.denied) return;
-    }
-
-    final LocationSettings locationSettings = LocationSettings(
-      accuracy: LocationAccuracy.high,
-      distanceFilter: 10, // Update every 10 meters change
-    );
-
-    // Get position stream
-    Geolocator.getPositionStream(locationSettings: locationSettings)
-        .throttle(Duration(seconds: 10)) // Throttle to every 10 seconds
-        .listen((Position position) {
-          _updateLocation(jeepId, position);
-        });
-  }
-
-  Future<void> _updateLocation(String jeepId, Position position) async {
-    await _dbRef.child('jeepneys/$jeepId').update({
-      'latitude': position.latitude,
-      'longitude': position.longitude,
-      'speed': position.speed * 3.6, // Convert m/s to km/h
-      'last_updated': DateTime.now().millisecondsSinceEpoch,
-    });
-  }
+// ── Hardware GPS Module Handled Externally ──
 
   // Debug/Setup: Seed initial data
   Future<void> seedInitialData(String jeepId) async {
@@ -242,6 +310,17 @@ class JeepneyService {
     return result;
   }
 
+  /// Update the current route for a jeepney
+  Future<void> updateJeepneyRoute(String jeepId, String routeName, {String? routeId}) async {
+    final updates = <String, dynamic>{
+      'route': routeName,
+    };
+    if (routeId != null) {
+      updates['route_id'] = routeId;
+    }
+    await _dbRef.child('jeepneys/$jeepId').update(updates);
+  }
+
   // ── Passenger Alert System ────────────────────────────────────────────────
 
   /// Send an alert from a passenger to the operator of a jeepney
@@ -290,6 +369,84 @@ class JeepneyService {
   Future<void> dismissAlert(String jeepId, String alertId) async {
     await _dbRef.child('jeepneys/$jeepId/alerts/$alertId').update({
       'dismissed': true,
+    });
+  }
+
+  // ── Boarding Log System ───────────────────────────────────────────────────
+
+  /// Reverse-geocode a lat/lng to a human-readable place name via Nominatim.
+  Future<String> reverseGeocode(double lat, double lng) async {
+    try {
+      final uri = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse'
+        '?format=json&lat=$lat&lon=$lng&zoom=17&addressdetails=1',
+      );
+      final resp = await http.get(uri, headers: {'User-Agent': 'ParaGo/1.0'})
+          .timeout(const Duration(seconds: 5));
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final addr = data['address'] as Map<String, dynamic>? ?? {};
+        // Build a readable string: road (suburb/village/town)
+        final road = addr['road'] ?? addr['pedestrian'] ?? addr['path'] ?? '';
+        final area = addr['suburb'] ?? addr['village'] ?? addr['city_district'] ??
+            addr['quarter'] ?? addr['town'] ?? addr['city'] ?? '';
+        if (road.isNotEmpty && area.isNotEmpty) return '$road, $area';
+        if (road.isNotEmpty) return road;
+        if (area.isNotEmpty) return area;
+        return data['display_name']?.toString().split(',').take(2).join(', ') ?? 'Unknown location';
+      }
+    } catch (_) {}
+    return 'Unknown location';
+  }
+
+  /// Write a boarding event to Firebase when passenger count changes.
+  Future<void> logBoardingEvent({
+    required String jeepId,
+    required int passengerCount,
+    required int delta,           // +1 for board, -1 for alight
+    required double latitude,
+    required double longitude,
+    String? locationName,
+  }) async {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    final logRef = _dbRef.child('jeepneys/$jeepId/boarding_logs').push();
+    
+    // Push immediately to keep the UI instant
+    await logRef.set({
+      'passenger_count': passengerCount,
+      'delta': delta,
+      'latitude': latitude,
+      'longitude': longitude,
+      'location_name': locationName ?? 'Locating...',
+      'timestamp': timestamp,
+    });
+
+    // If an external location string wasn't provided, fetch it in background
+    if (locationName == null || locationName.isEmpty) {
+      reverseGeocode(latitude, longitude).then((name) {
+        logRef.update({'location_name': name});
+      });
+    }
+  }
+
+  /// Stream all boarding log entries for a jeepney (newest first).
+  Stream<List<Map<String, dynamic>>> streamBoardingLogs(String jeepId) {
+    return _dbRef
+        .child('jeepneys/$jeepId/boarding_logs')
+        .onValue
+        .map<List<Map<String, dynamic>>>((event) {
+      final value = event.snapshot.value;
+      if (value == null) return [];
+      final map = value as Map<dynamic, dynamic>;
+      final list = <Map<String, dynamic>>[];
+      for (final entry in map.entries) {
+        final data = Map<String, dynamic>.from(entry.value as Map);
+        data['id'] = entry.key.toString();
+        list.add(data);
+      }
+      list.sort((a, b) =>
+          (b['timestamp'] as int? ?? 0).compareTo(a['timestamp'] as int? ?? 0));
+      return list;
     });
   }
 }

@@ -16,6 +16,7 @@ class JeepneyData {
   final int lastUpdated;
   final String? operatorName;
   final String? jeepneyName;
+  final String? routeId;
   final String? routeDescription;
 
   JeepneyData({
@@ -37,6 +38,7 @@ class JeepneyData {
     this.operatorName,
     this.jeepneyName,
     this.routeDescription,
+    this.routeId,
   });
 
   factory JeepneyData.fromMap(String id, Map<dynamic, dynamic> map) {
@@ -63,6 +65,7 @@ class JeepneyData {
       operatorName: map['operator_name'] as String? ?? 'Juan Dela Cruz', // Mock default
       jeepneyName: map['jeepney_name'] as String? ?? 'Golden Arc Expressway', // Mock default
       routeDescription: map['route_description'] as String? ?? 'via Commonwealth, Litex', // Mock default
+      routeId: map['route_id'] as String?,
     );
   }
 
@@ -85,6 +88,7 @@ class JeepneyData {
       'operator_name': operatorName,
       'jeepney_name': jeepneyName,
       'route_description': routeDescription,
+      'route_id': routeId,
     };
   }
 

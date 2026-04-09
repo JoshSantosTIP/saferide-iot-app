@@ -41,6 +41,13 @@ class ChatbotFab extends StatelessWidget {
   }
 }
 
+/// Public alias — lets operator screens open the chat modal directly.
+class ChatbotFabSheet extends StatelessWidget {
+  const ChatbotFabSheet({super.key});
+  @override
+  Widget build(BuildContext context) => const _ChatModal();
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Chat modal bottom sheet
 // ─────────────────────────────────────────────────────────────────────────────
