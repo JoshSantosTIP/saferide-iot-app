@@ -118,6 +118,9 @@ class AuthService {
       } else {
         // Mobile platform code (google_sign_in v7.2.0+)
         final googleSignIn = GoogleSignIn.instance;
+        await googleSignIn.initialize(
+          serverClientId: '818947733601-4kioriku1hh0gk5j255rj5rn5dln99g3.apps.googleusercontent.com',
+        );
         final GoogleSignInAccount googleUser = await googleSignIn.authenticate();
 
         final GoogleSignInAuthentication googleAuth = googleUser.authentication;

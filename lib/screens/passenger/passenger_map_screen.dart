@@ -80,7 +80,7 @@ class _PassengerMapScreenState extends State<PassengerMapScreen> {
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
-              padding: const EdgeInsets.fromLTRB(24, 76, 24, 40), // Added top padding for global logo
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 40), // Added top padding for global logo
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

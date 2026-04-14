@@ -58,7 +58,7 @@ class _PassengerNearbyScreenState extends State<PassengerNearbyScreen> {
           children: [
             // Header
             Padding(
-              padding: const EdgeInsets.fromLTRB(24, 76, 24, 16),
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

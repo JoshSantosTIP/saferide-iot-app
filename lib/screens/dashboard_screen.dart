@@ -688,7 +688,7 @@ class _OperatorDashTabState extends State<_OperatorDashTab>
                       initialZoom: 16.0,
                     ),
                     children: [
-                      TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+                      TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.saferide.iot'),
                       MarkerLayer(markers: [
                         Marker(
                           point: LatLng(data.latitude, data.longitude),
@@ -1787,7 +1787,7 @@ class _OperatorAnalyticsTabState extends State<_OperatorAnalyticsTab> {
                               interactionOptions: const InteractionOptions(flags: InteractiveFlag.all),
                             ),
                             children: [
-                              TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+                              TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.saferide.iot'),
                               MarkerLayer(markers: fullscreenMarkers),
                             ],
                           ),
@@ -1843,7 +1843,7 @@ class _OperatorAnalyticsTabState extends State<_OperatorAnalyticsTab> {
                       initialZoom: 14.0,
                     ),
                     children: [
-                      TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'),
+                      TileLayer(urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png', userAgentPackageName: 'com.saferide.iot'),
                       MarkerLayer(markers: normalMarkers),
                     ],
                   ),
